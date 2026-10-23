@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude AI Free Video Studio</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div class="brand"><span class="logo">✦</span><div><b>AI Video Studio</b><small>Multi-model • Edit • Create</small></div></div><span class="badge">MVP · FFmpeg</span></header>
+<main>
+<section class="hero"><p class="eyebrow">YOUR ALL-IN-ONE CREATIVE WORKSPACE</p><h1>Make videos.<br><span>Make them yours.</span></h1><p class="sub">Edit clips, create scripts, prepare Shorts and export MP4 — from one simple workspace.</p></section>
+<div id="status" class="status">Checking renderer…</div>
+<div class="grid">
+<section class="panel"><div class="panelhead"><span class="num">01</span><div><h2>Media library</h2><p>Upload video, audio, or SRT subtitles</p></div></div>
+<label class="drop" for="files"><span class="dropicon">＋</span><b>Choose files</b><span>MP4, MOV, MKV, WEBM, MP3, WAV, SRT</span><input id="files" type="file" multiple accept="video/*,audio/*,.srt"></label>
+<div id="mediaList" class="media-list"><p class="muted">Your uploaded files will appear here.</p></div>
+</section>
+<section class="panel"><div class="panelhead"><span class="num">02</span><div><h2>Quick edit & export</h2><p>Choose format and render an MP4</p></div></div>
+<div class="formgrid"><label>Aspect ratio<select id="aspect"><option value="9:16">9:16 · Reels / Shorts</option><option value="16:9">16:9 · YouTube</option><option value="1:1">1:1 · Square</option></select></label>
+<label>Resolution<select id="resolution"><option value="1080">1080p · High</option><option value="720">720p · Faster</option></select></label>
+<label>Trim start (seconds)<input id="start" type="number" min="0" value="0" step="0.1"></label>
+<label>Trim end (seconds)<input id="end" type="number" min="0" placeholder="Full length" step="0.1"></label>
+<label class="wide">Output filename<input id="outputName" value="my-video" maxlength="70"></label></div>
+<button id="render" class="primary">▶ Render video</button><div id="renderStatus" class="result"></div>
+</section>
+<section class="panel ai-panel"><div class="panelhead"><span class="num">03</span><div><h2>AI creative assistant</h2><p>Use your configured AI model for ideas and writing</p></div></div>
+<label>What are you making?<textarea id="prompt" rows="4" placeholder="Example: A 30-second Hinglish documentary Short about air pollution, serious tone, strong hook…"></textarea></label>
+<div class="airow"><select id="aiMode"><option value="script">Video script</option><option value="storyboard">Scene storyboard</option><option value="caption">Captions & hashtags</option></select><button id="generate" class="secondary">✦ Generate</button></div>
+<div id="aiResult" class="airesult" hidden><textarea id="aiText" rows="10" readonly></textarea><button id="copy" class="secondary">Copy result</button></div>
+<details><summary>AI provider setup</summary><p>On the server, set <code>AI_BASE_URL</code>, <code>AI_API_KEY</code>, and <code>AI_MODEL</code> in your environment. Restart the app. Never put secret API keys in browser JavaScript.</p></details>
+</section>
+<section class="panel"><div class="panelhead"><span class="num">04</span><div><h2>Roadmap</h2><p>Starter features vs. future modules</p></div></div>
+<div class="featurelist"><span>✓ FFmpeg trim & format conversion</span><span>✓ Multiple clip merge</span><span>✓ AI script / storyboard / caption API</span><span>✓ Mobile-friendly interface</span><span>◌ Timeline with draggable tracks</span><span>◌ Auto subtitles from speech recognition</span><span>◌ Text-to-video provider integration</span><span>◌ User accounts, projects & cloud storage</span></div>
+</section>
+</div>
+<footer>Keep it creative. Export responsibly. <span>AI Video Studio</span></footer>
+</main><script src="/static/app.js"></script>
+</body></html>
