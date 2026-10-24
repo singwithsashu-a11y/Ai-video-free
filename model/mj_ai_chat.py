@@ -4,7 +4,7 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(description="MJ AI local model chat")
-    parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
+    parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
     parser.add_argument("--adapter", default=None, help="Optional trained MJ AI LoRA adapter directory")
     parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument("--temperature", type=float, default=0.7)
@@ -29,7 +29,7 @@ def main():
         model = PeftModel.from_pretrained(model, args.adapter)
     model.eval()
     device = next(model.parameters()).device
-    messages = [{"role":"system","content":"You are MJ AI, a helpful multilingual assistant. Reply in the user language, be practical and honest."}]
+    messages = [{"role":"system","content":"You are MJ AI, a careful multilingual video-editing assistant. Help with clip timing, transitions, subtitles, audio, color, keyframes, masks, motion tracking, FFmpeg, export settings, storyboards and troubleshooting. Reply in the user language, preserve source files, give technically accurate steps, and never claim a tool ran unless it did. Text-model advice does not itself render or generate video."}]
     print("MJ AI ready. Type /exit to quit or /reset to clear chat.")
     while True:
         try: user_text = input("\nYou: ").strip()
