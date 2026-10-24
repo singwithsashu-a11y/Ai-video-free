@@ -61,6 +61,17 @@ The adapter is a small set of learned weights, **not a standalone model**. Load 
 pip install -r training/requirements-inference.txt
 ~~~
 
+### Install and smoke-test the completed GitHub Actions artifact
+
+For the successful run linked in the project history, download the `mj-ai-improved-lora-adapter` artifact from [GitHub Actions run 40051547131](https://github.com/singwithsashu-a11y/Ai-video-free/actions/runs/40051547131), then extract it so `adapter_config.json` and `adapter_model.safetensors` are directly inside `models/mj-ai-lora/`. Do not commit the model files to Git.
+
+~~~bash
+pip install -r training/requirements-inference.txt
+python training/test_adapter.py --adapter models/mj-ai-lora
+~~~
+
+This smoke test checks that the adapter loads and produces non-empty text for three prompts; it is not a quality or factual-accuracy benchmark. The successful training run used **64 examples for 2 epochs**, not one million. For the website API, set `MJ_AI_ADAPTER_PATH=models/mj-ai-lora` and `MJ_AI_BASE_MODEL=Qwen/Qwen2.5-0.5B-Instruct` in the backend environment, then check `/api/mj-ai/status`. Select the `adapter` provider in requests to `/api/mj-ai/chat`. CPU inference can be slow and requires sufficient RAM.
+
 Example environment settings:
 
 ~~~env
