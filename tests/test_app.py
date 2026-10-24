@@ -67,3 +67,46 @@ def test_mj_ai_chat_requires_provider_configuration(monkeypatch):
     })
     assert response.status_code == 400
     assert "AI_BASE_URL" in response.json()["detail"]
+
+
+def test_media_library_endpoint_returns_list():
+    response = client.get("/api/media")
+    assert response.status_code == 200
+    assert isinstance(response.json()["files"], list)
+
+
+def test_projects_can_be_saved_loaded_updated_and_deleted():
+    created = client.post("/api/projects", json={
+        "name": "Test project",
+        "data": {"files": ["a" * 32], "aspect": "9:16", "burn_subtitles": False}
+    })
+    assert created.status_code == 200
+    project = created.json()
+    project_id = project["id"]
+    try:
+        fetched = client.get(f"/api/projects/{project_id}")
+        assert fetched.status_code == 200
+        assert fetched.json()["data"]["aspect"] == "9:16"
+
+        updated = client.put(f"/api/projects/{project_id}", json={
+            "name": "Updated project", "data": {"aspect": "16:9"}
+        })
+        assert updated.status_code == 200
+        assert updated.json()["name"] == "Updated project"
+        assert client.get("/api/projects").status_code == 200
+    finally:
+        deleted = client.delete(f"/api/projects/{project_id}")
+        assert deleted.status_code == 200
+    assert client.get(f"/api/projects/{project_id}").status_code == 404
+
+
+def test_render_rejects_invalid_uploaded_file_id():
+    response = client.post("/api/render", json={"files": ["../../etc/passwd"]})
+    assert response.status_code == 400
+
+
+def test_adapter_provider_reports_missing_adapter_cleanly(monkeypatch, tmp_path):
+    monkeypatch.setenv("MJ_AI_ADAPTER_PATH", str(tmp_path / "not-installed"))
+    response = client.get("/api/mj-ai/status")
+    assert response.status_code == 200
+    assert response.json()["adapter"]["configured"] is False
