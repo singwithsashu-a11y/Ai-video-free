@@ -26,4 +26,4 @@ def test_offline_generation_does_not_require_backend_api():
 def test_static_hosting_message_explains_backend_required_for_rendering():
     html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
     assert "GitHub Pages is frontend-only" in html
-    assert "MP4 rendering need a backend URL" in html
+    assert "FFmpeg rendering need a running FastAPI backend" in html
