@@ -222,9 +222,7 @@ async function sendChat(){
     chatHistory.push({role:'assistant',content:answer,replyTo:prompt,model,approved:false});saveChat();renderChat();
     $('chatStatus').textContent='Reply ready. Recent context is saved in this browser; use “Helpful · save example” to approve training data.';
   }catch(err){
-    $('chatHistoryError');
-    chatHistory.push({role:'assistant',content:'Could not get an AI reply: '+err.message+'\n\nIf this is GitHub Pages, try Offline Template or Browser AI, or connect a working backend.',replyTo:prompt,approved:false});saveChat();renderChat();
-    $('chatStatus').textContent='Request failed. Your message is kept locally; choose another engine or check the backend URL.';
+    $('chatStatus').textContent='Request failed: '+err.message+'. Your message is kept locally; choose Offline Template or Browser AI, or check the backend URL.';
   }finally{btn.disabled=false;btn.textContent='Send message';}
 }
 $('sendChat')?.addEventListener('click',sendChat);
