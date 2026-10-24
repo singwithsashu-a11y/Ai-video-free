@@ -24,6 +24,7 @@
 <article class="card"><div class="icon">🧰</div><h3>Workflow planner</h3><p>Plan a no-key workflow and see which stages can run offline versus requiring model downloads.</p><div class="tags"><span class="tag ready">Browser-only demo</span><span class="tag">No hidden API calls</span></div><a class="btn secondary smallbtn" href="#workspace">Build a workflow</a></article>
 </section>
 <section id="workspace"><div class="sectionhead"><div><h2>Offline creative workspace</h2><p>Template-based starter generation. It works without a model, but is not a real LLM.</p></div></div>
+<article class="card" style="margin-bottom:14px"><div class="paneltitle"><div class="icon">🧠</div><h3>MJ AI Chat · local model</h3></div><p>Multi-turn chat with the model loaded in this browser. Conversation stays in this page; a small model is not as capable as ChatGPT/Claude/Gemini, and the model must load first.</p><div id="chatMessages" class="output" style="min-height:180px;max-height:360px;overflow:auto" aria-live="polite">MJ AI: Load the local model below, then ask a question. This chat runs on your device when WebGPU is supported.</div><label class="formlabel" for="chatPrompt">Message MJ AI</label><textarea id="chatPrompt" rows="3" placeholder="Ask in Hinglish, Hindi, English or Bangla…"></textarea><div class="row"><button class="btn" id="sendChat" disabled>Send message</button><button class="btn secondary" id="clearChat">New chat</button><span class="note" id="chatState">Load the model to enable chat.</span></div></article>
 <div class="two"><article class="card"><div class="paneltitle"><div class="icon">✦</div><h3>Script / storyboard helper</h3></div><label class="formlabel" for="idea">Your idea</label><textarea id="idea" placeholder="Example: 45-second Hinglish documentary Short about air pollution in a serious, cinematic style."></textarea><div class="two"><div><label class="formlabel" for="task">Output</label><select id="task"><option value="script">Video script</option><option value="storyboard">Scene-by-scene storyboard</option><option value="captions">Caption + hashtags</option><option value="prompts">AI visual prompts</option></select></div><div><label class="formlabel" for="language">Language</label><select id="language"><option>Hinglish</option><option>Hindi</option><option>English</option><option>Bangla</option></select></div></div><div class="row"><button class="btn" id="loadBrowserAI">Load real local AI model</button><button class="btn" id="makeLocalAI" disabled>Generate with local AI</button><button class="btn secondary" id="makeText">Offline template</button><button class="btn secondary" id="copyText">Copy</button></div><div id="browserAIStatus" class="note" aria-live="polite">Real browser AI is not loaded. Load a small Qwen model first; first download may be several hundred MB and needs Chrome with WebGPU.</div><div class="output" id="writerOutput" aria-live="polite">Your draft will appear here. This is a deterministic template helper, not a language model.</div></article>
 <article class="card"><div class="paneltitle"><div class="icon">🧩</div><h3>Workflow builder</h3></div><label class="formlabel" for="goal">What do you want to make?</label><select id="goal"><option value="short">A YouTube Short / Reel</option><option value="long">A YouTube documentary</option><option value="music">A lyric / music video</option><option value="image">Images / thumbnail</option><option value="voice">Voice-over and subtitles</option></select><label class="formlabel" for="hardware">Where will models run?</label><select id="hardware"><option value="phone">Android phone only</option><option value="shared">Shared hosting / cPanel</option><option value="pc">PC or laptop I control</option><option value="vps">VPS with enough RAM/GPU</option></select><div class="row"><button class="btn" id="buildFlow">Build no-key plan</button></div><div class="output" id="flowOutput" aria-live="polite">Choose your project and hardware, then build a practical plan.</div></article></div></section>
 <section id="models"><div class="sectionhead"><div><h2>Open-model library</h2><p>Model families and runtimes to install separately. Nothing here downloads multi-GB weights automatically.</p></div><span class="pill">Curated starter list · not bundled models</span></div><div class="catalog">
@@ -48,6 +49,29 @@
 const $=id=>document.getElementById(id);
 $('checkLocal').addEventListener('click',async()=>{const state=$('ollamaState'),hint=$('localHint');state.textContent='Checking…';hint.textContent='Trying the Ollama endpoint on this device. A browser CORS restriction can prevent this check.';try{const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(2500)});if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();state.textContent='Responding';hint.textContent='Ollama responded. Installed models: '+((d.models||[]).map(m=>m.name).join(', ')||'none detected')+'. Note: this checks the device running the browser, not the website host.'}catch(e){state.textContent='Not reachable';hint.textContent='No response from local Ollama, or browser security blocked the request. If you only have Android + shared hosting, this is expected. The template helper below still works.'}});
 let browserEngine=null;
+let chatHistory=[];
+function renderChat(){
+ const box=$('chatMessages');
+ box.textContent=chatHistory.map(m=>(m.role==='user'?'You: ':'MJ AI: ')+m.content).join('\n\n')||'MJ AI: New conversation. Load the local model and ask a question.';
+ box.scrollTop=box.scrollHeight;
+}
+$('sendChat').addEventListener('click',async()=>{
+ const input=$('chatPrompt'),text=input.value.trim(),btn=$('sendChat');
+ if(!text)return;
+ if(!browserEngine){$('chatState').textContent='Load the local model first.';return}
+ if(chatHistory.filter(m=>m.role==='user').length>=24){$('chatState').textContent='Conversation limit reached. Start a new chat to keep memory usage manageable.';return}
+ chatHistory.push({role:'user',content:text});input.value='';renderChat();btn.disabled=true;$('chatState').textContent='Thinking on this device…';
+ try{
+  const messages=[{role:'system',content:'You are MJ AI, a helpful multilingual assistant. Reply in the user’s language. Help with learning, writing, coding and creative work. Be honest about uncertainty and do not claim tools you did not use.'},...chatHistory];
+  const res=await browserEngine.chat.completions.create({messages,temperature:0.7,max_tokens:900});
+  const answer=res.choices?.[0]?.message?.content?.trim()||'Model returned no text.';
+  chatHistory.push({role:'assistant',content:answer});renderChat();$('chatState').textContent='Reply generated locally. No API key used.';
+ }catch(e){chatHistory.pop();renderChat();$('chatState').textContent='Chat error: '+(e?.message||String(e))}
+ finally{btn.disabled=false}
+});
+$('chatPrompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('sendChat').click()}});
+$('clearChat').addEventListener('click',()=>{chatHistory=[];renderChat();$('chatState').textContent='New conversation. Local model stays loaded.'});
+
 $('loadBrowserAI').addEventListener('click',async()=>{
  const status=$('browserAIStatus'),btn=$('loadBrowserAI');
  if(browserEngine){status.textContent='Local AI model is loaded and ready on this device.';return}
@@ -57,7 +81,7 @@ $('loadBrowserAI').addEventListener('click',async()=>{
   const webllm=await import('https://esm.run/@mlc-ai/web-llm');
   const modelId='Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
   browserEngine=await webllm.CreateMLCEngine(modelId,{initProgressCallback:(p)=>{status.textContent=p.text||('Loading local model: '+Math.round((p.progress||0)*100)+'%')}});
-  $('makeLocalAI').disabled=false;
+  $('makeLocalAI').disabled=false;$('sendChat').disabled=false;$('chatState').textContent='Local model ready. Ask MJ AI anything.';
   status.textContent='Ready: Qwen model is running inside this browser. Your prompts are processed on this device.';
  }catch(e){browserEngine=null;status.textContent='Could not load browser AI: '+(e?.message||String(e))+'. Check internet for the first model download, available storage, and WebGPU support.'}
  finally{btn.disabled=false}
