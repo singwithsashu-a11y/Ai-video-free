@@ -1,0 +1,94 @@
+name: MJ AI LoRA Training
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Hugging Face base model"
+        required: true
+        default: "Qwen/Qwen2.5-0.5B-Instruct"
+        type: string
+      epochs:
+        description: "Training epochs (start with 1)"
+        required: true
+        default: "1"
+        type: string
+      max_length:
+        description: "Maximum token length"
+        required: true
+        default: "256"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mj-ai-training
+  cancel-in-progress: false
+
+jobs:
+  train:
+    name: Fine-tune MJ AI adapter (CPU runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch transformers datasets peft accelerate
+
+      - name: Validate starter dataset
+        run: |
+          python training/prepare_dataset.py training/seed_data.jsonl /tmp/mj-ai-processed.jsonl
+          python - <<'PY'
+          import json
+          p = "/tmp/mj-ai-processed.jsonl"
+          rows = [json.loads(line) for line in open(p, encoding="utf-8") if line.strip()]
+          if not rows:
+              raise SystemExit("Dataset has zero valid examples")
+          print(f"Validated {len(rows)} examples")
+          PY
+
+      - name: Train LoRA adapter
+        env:
+          MODEL_ID: ${{ inputs.model }}
+          EPOCHS: ${{ inputs.epochs }}
+          MAX_LENGTH: ${{ inputs.max_length }}
+        run: |
+          python training/train_lora.py \
+            --model "$MODEL_ID" \
+            --data /tmp/mj-ai-processed.jsonl \
+            --output output/mj-ai-lora \
+            --epochs "$EPOCHS" \
+            --max-length "$MAX_LENGTH"
+
+      - name: Verify adapter output
+        run: |
+          test -s output/mj-ai-lora/adapter_config.json
+          find output/mj-ai-lora -maxdepth 1 -type f -printf '%f %s bytes\n'
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("output/mj-ai-lora")
+          weights = list(p.glob("adapter_model.safetensors")) + list(p.glob("adapter_model.bin"))
+          if not weights or weights[0].stat().st_size == 0:
+              raise SystemExit("Adapter weights missing or empty")
+          print("Adapter config and weights verified.")
+          PY
+
+      - name: Upload trained adapter
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mj-ai-lora-adapter
+          path: output/mj-ai-lora/
+          if-no-files-found: error
+          retention-days: 14
