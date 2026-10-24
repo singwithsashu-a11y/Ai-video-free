@@ -3,64 +3,77 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0d12">
-<title>MJ AI Video Studio</title>
+<title>MJ AI Studio — Create with AI</title>
 <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
-<header><a class="brand" href="/" aria-label="MJ AI Studio home"><span class="logo">✦</span><span><b>MJ AI Studio</b><small>AI • Edit • Export</small></span></a><div class="header-actions"><span id="engineBadge" class="badge">Checking services…</span><button id="refreshStatus" class="icon-button" title="Refresh service status" aria-label="Refresh service status">↻</button></div></header>
-<main>
-<section class="hero"><p class="eyebrow">YOUR CREATIVE WORKSPACE</p><h1>Make videos.<br><span>Make them yours.</span></h1><p class="sub">Edit clips, create scripts with AI, add music and subtitles, and export MP4 for Shorts, Reels or YouTube.</p></section>
-<div id="status" class="status" role="status">Checking backend…</div>
-<details class="api-settings"><summary>Connect to your backend (static hosting / GitHub Pages)</summary><div class="backend-connect"><label>Backend base URL<input id="apiBaseUrl" type="url" placeholder="https://your-api-domain.example"></label><button id="saveApiBase" class="secondary">Connect</button><button id="clearApiBase" class="danger">Use same-site backend</button></div><p class="hint">Leave blank when the website and API are served from the same host. GitHub Pages is frontend-only: upload, media library, project sync and FFmpeg rendering need a running FastAPI backend. Enter its URL here and configure <code>STUDIO_CORS_ORIGINS</code> on that server. Offline templates and browser AI can run without the backend.</p></details>
-<section class="panel projectbar"><div><h2>Projects</h2><p>Save your edit settings and reopen them later on this server.</p></div><div class="project-controls"><input id="projectName" aria-label="Project name" value="My video project" maxlength="100"><button id="saveProject" class="secondary">Save project</button><select id="projectSelect" aria-label="Saved projects"><option value="">Load saved project…</option></select><button id="loadProject" class="secondary">Load</button><button id="deleteProject" class="danger">Delete</button></div></section>
-<div class="grid">
-<section class="panel"><div class="panelhead"><span class="num">01</span><div><h2>Media library</h2><p>Upload video clips, soundtrack audio or SRT subtitles</p></div></div>
-<label class="drop" for="files"><span class="dropicon">＋</span><b>Choose media files</b><span>MP4, MOV, MKV, WEBM, MP3, WAV, M4A, SRT</span><input id="files" type="file" multiple accept="video/*,audio/*,.srt"></label>
-<div class="media-toolbar"><span id="mediaCount">0 files</span><button id="clearMedia" class="text-button">Clear list</button></div>
-<div id="mediaList" class="media-list"><p class="muted">Your uploaded files will appear here.</p></div>
-</section>
-<section class="panel"><div class="panelhead"><span class="num">02</span><div><h2>Edit & export</h2><p>Select clips, soundtrack, subtitles and output format</p></div></div>
-<div class="formgrid">
-<label class="wide">Video clips to combine<select id="clipSelect" multiple size="4" aria-label="Video clips to combine"><option disabled>Upload video files first</option></select><small class="hint">Select one or more videos. Multiple clips are joined in selection order.</small></label>
-<label class="wide">Background soundtrack (optional)<select id="audioSelect"><option value="">Keep original video audio</option></select></label>
-<label class="wide">Subtitle file (optional)<select id="subtitleSelect"><option value="">No subtitles</option></select></label>
-<label class="check wide"><input id="burnSubtitles" type="checkbox"> Burn subtitles into the video</label>
-<label>Aspect ratio<select id="aspect"><option value="9:16">9:16 · Reels / Shorts</option><option value="16:9">16:9 · YouTube</option><option value="1:1">1:1 · Square</option></select></label>
-<label>Resolution<select id="resolution"><option value="1080">1080p · High</option><option value="720">720p · Faster</option></select></label>
-<label>Trim start (seconds)<input id="start" type="number" min="0" value="0" step="0.1"></label>
-<label>Trim end (seconds)<input id="end" type="number" min="0" placeholder="Full length" step="0.1"></label>
-<label class="wide">Music volume <span id="volumeLabel">25%</span><input id="musicVolume" type="range" min="0" max="100" value="25"></label>
-<label class="wide">Output filename<input id="outputName" value="my-video" maxlength="70"></label>
-</div>
-<button id="render" class="primary">▶ Render MP4</button><div id="renderStatus" class="result" role="status"></div>
-</section>
-<section class="panel ai-panel"><div class="panelhead"><span class="num">03</span><div><h2>AI creative assistant</h2><p>Generate scripts, storyboards, captions and video ideas</p></div></div>
-<label>Describe your video idea<textarea id="prompt" rows="4" maxlength="12000" placeholder="Example: 30-second Hinglish documentary Short about air pollution, serious tone, strong hook, 5 scenes…"></textarea></label>
-<div class="formgrid">
-<label class="wide">AI engine<select id="aiProvider"><option value="browser">Browser AI · No API key (experimental)</option><option value="adapter">MJ AI Fine-tuned Adapter · Server</option><option value="local">Local Ollama · Server</option><option value="offline">Offline template · No model</option><option value="cloud">Cloud AI · Optional</option></select></label>
-<label class="wide">Output type<select id="aiMode"><option value="script">Video script</option><option value="storyboard">Scene storyboard</option><option value="caption">Captions & hashtags</option></select></label>
-</div>
-<button id="generate" class="secondary full-button">✦ Generate with AI</button><div id="aiProgress" class="progress" hidden></div>
-<div id="aiResult" class="airesult" hidden><textarea id="aiText" rows="12" readonly aria-label="AI result"></textarea><div class="button-row"><button id="copy" class="secondary">Copy result</button><button id="useScript" class="secondary">Use as edit notes</button></div></div>
-<details><summary>Browser AI: no API key</summary><p>Loads a small Qwen 0.5B model into this browser from Hugging Face on first use. Model files can be hundreds of MB and use your phone's RAM/storage. Requires internet for the first download; browser/WebGPU support and performance vary by device. Prompt inference runs on your device after model download. This browser mode does not load your separately trained LoRA adapter.</p></details>
-<details><summary>Use the trained MJ AI adapter</summary><p>Extract the GitHub Actions adapter into <code>models/mj-ai-lora/</code> on the backend host, install <code>training/requirements-inference.txt</code>, and set <code>MJ_AI_ADAPTER_PATH=models/mj-ai-lora</code> and <code>MJ_AI_BASE_MODEL=Qwen/Qwen2.5-0.5B-Instruct</code> in the server environment. The base model downloads separately. Adapter inference may be too heavy for shared hosting.</p></details>
-<details><summary>Local Ollama / cloud setup</summary><p>Ollama runs on the machine hosting the backend, not automatically on your phone. Set <code>OLLAMA_BASE_URL</code> and <code>OLLAMA_MODEL</code> server-side. For cloud AI, set <code>AI_BASE_URL</code>, <code>AI_API_KEY</code> and <code>AI_MODEL</code> on the backend. Never put secret API keys in frontend code.</p></details>
-</section>
-<section class="panel learning-panel">
-<div class="panelhead"><span class="num">04</span><div><h2>Talk to MJ AI · Learning Memory</h2><p>Continue conversations, remember context in this browser, and approve useful answers for future training.</p></div></div>
-<div id="chatMessages" class="chat-messages" role="log" aria-live="polite"><p class="chat-empty">Start a conversation. MJ AI can use recent messages as context on this device.</p></div>
-<label>Chat engine<select id="chatProvider"><option value="browser">Browser AI · No API key (experimental)</option><option value="adapter">MJ AI Fine-tuned Adapter · Server</option><option value="local">Local Ollama · Server</option><option value="offline">Offline template · Works on static hosting</option><option value="cloud">Cloud AI · Optional server setup</option></select></label>
-<label class="chat-input-label">Your message<textarea id="chatInput" rows="3" maxlength="12000" placeholder="MJ AI se baat karo… (Enter to send, Shift+Enter for a new line)"></textarea></label>
-<div class="button-row chat-actions"><button id="sendChat" class="primary">Send message</button><button id="exportLearning" class="secondary">Export approved learning data</button><button id="clearChatMemory" class="danger">Clear memory</button></div>
-<div id="chatStatus" class="progress" role="status">Conversation history stays in this browser unless you export it.</div>
-<p class="hint">Memory is saved locally in this browser and helps with context; it does not update model weights by itself. Tap “Helpful · save example” under a good answer to approve it for a future training dataset. Nothing is silently sent to training.</p>
-</section>
-<section class="panel"><div class="panelhead"><span class="num">05</span><div><h2>Before you export</h2><p>What this version supports</p></div></div>
-<div class="featurelist"><span>✓ Upload and combine video clips</span><span>✓ Trim one clip and choose 9:16, 16:9 or 1:1</span><span>✓ Add background audio and burn SRT subtitles</span><span>✓ Browser AI + optional Ollama, adapter or cloud model</span><span>✓ Save and reopen project settings on this server</span><span>✓ MP4 H.264/AAC output through FFmpeg</span></div>
-<p class="hint">Note: this is a self-hostable starter studio, not a full professional multi-track timeline or a text-to-video generator. Server rendering needs FFmpeg/FFprobe and enough CPU, RAM, storage and request time.</p>
-</section>
-</div>
-<footer><span>MJ AI Studio</span><span>Make something original.</span></footer>
+<header class="topbar">
+  <a class="brand" href="/" aria-label="MJ AI Studio home"><span class="logo">✦</span><span><b>MJ AI</b><small>Studio</small></span></a>
+  <nav class="main-nav" aria-label="Main navigation">
+    <button class="nav-tab active" data-view-target="chat">✦ Chat</button>
+    <button class="nav-tab" data-view-target="create">▧ Create</button>
+    <button class="nav-tab" data-view-target="edit">✂ Edit video</button>
+    <button class="nav-tab" data-view-target="projects">▤ Projects</button>
+  </nav>
+  <div class="header-actions"><span id="engineBadge" class="badge">Checking…</span><button id="refreshStatus" class="icon-button" title="Refresh service status" aria-label="Refresh service status">↻</button></div>
+</header>
+<main class="app-shell">
+  <div id="status" class="status" role="status">Checking backend…</div>
+  <details class="api-settings"><summary>⚙ Backend connection</summary><div class="backend-connect"><label>Backend base URL<input id="apiBaseUrl" type="url" placeholder="https://your-service.onrender.com"></label><button id="saveApiBase" class="secondary">Connect</button><button id="clearApiBase" class="danger">Clear URL</button></div><p class="hint">GitHub Pages hosts only this interface. Uploads, shared projects and FFmpeg rendering need your deployed FastAPI backend. Enter its HTTPS URL here.</p></details>
+
+  <section class="view active" data-view="chat">
+    <div class="chat-layout">
+      <aside class="chat-side">
+        <div class="side-mark">✦</div><h1>Your creative<br><span>AI partner.</span></h1>
+        <p>Talk naturally. Share a photo. Turn an idea into a script or a video plan.</p>
+        <div class="capability"><span>✧</span><div><b>Chat & brainstorm</b><small>Ask follow-up questions with context</small></div></div>
+        <div class="capability"><span>▧</span><div><b>Photo-aware chat</b><small>Attach an image with a vision-capable model</small></div></div>
+        <div class="capability"><span>▶</span><div><b>Create & edit</b><small>Build a plan, then edit and render clips</small></div></div>
+        <div class="side-note">Photo understanding requires a configured vision-capable cloud model or compatible Ollama vision model. Text-to-video generation is not built in.</div>
+      </aside>
+      <section class="panel chat-panel">
+        <div class="chat-top"><div><span class="eyebrow">MJ AI · WORKSPACE</span><h2>What are we making today?</h2></div><span class="online-dot">● Ready when connected</span></div>
+        <div id="chatMessages" class="chat-messages" role="log" aria-live="polite"><div class="welcome-card"><span class="welcome-icon">✦</span><h3>Hey! Let's make something great.</h3><p>Ask me anything, brainstorm a video, or attach a photo to discuss it.</p><div class="suggestions"><button class="suggestion" data-prompt="Create a viral 30-second Hinglish documentary Short with a strong hook.">🎬 Viral Short idea</button><button class="suggestion" data-prompt="Help me make a cinematic sad love music video, scene by scene.">🎵 Music video</button><button class="suggestion" data-prompt="Give me 5 original YouTube video ideas with strong hooks.">💡 Video ideas</button></div></div></div>
+        <div id="chatImagePreview" class="image-preview" hidden><img id="chatPreviewImg" alt="Selected image preview"><div><b id="chatImageName">Image attached</b><small>Will be sent with your next message</small></div><button id="removeChatImage" class="icon-button" aria-label="Remove attached image">×</button></div>
+        <div class="composer">
+          <textarea id="chatInput" rows="2" maxlength="12000" placeholder="Message MJ AI… (Enter to send, Shift+Enter for a new line)"></textarea>
+          <div class="composer-bottom"><div class="composer-tools"><label class="attach-button" for="chatImageInput">＋ Photo<input id="chatImageInput" type="file" accept="image/*" hidden></label><select id="chatProvider" aria-label="AI engine"><option value="cloud">Cloud AI · Fastest when configured</option><option value="ollama">Ollama vision/chat · Server</option><option value="adapter">MJ AI adapter · Text only</option><option value="browser">Browser AI · Slow on phones</option><option value="offline">Offline template</option></select><span class="privacy-note">Your image is sent only when you send the message.</span></div><button id="sendChat" class="send-button" aria-label="Send message">↑</button></div>
+        </div>
+        <div id="chatStatus" class="chat-status" role="status">For faster, higher-quality replies, configure a cloud model on your backend. Browser AI may take a long time on phones.</div>
+        <div class="chat-footer"><button id="exportLearning" class="text-button">Export approved examples</button><button id="clearChatMemory" class="text-button">Clear chat memory</button><span>AI can make mistakes. Review before publishing.</span></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="view" data-view="create">
+    <div class="view-heading"><span class="eyebrow">FROM IDEA TO STORY</span><h1>Create with AI</h1><p>Describe the video you want. Get a script, storyboard, captions or a ready-to-use visual plan.</p></div>
+    <section class="panel ai-panel"><div class="panelhead"><span class="num">01</span><div><h2>Creative brief</h2><p>Specific details produce better results.</p></div></div>
+      <label>Describe your video idea<textarea id="prompt" rows="5" maxlength="12000" placeholder="Example: 30-second Hinglish documentary Short about air pollution, serious tone, 5 scenes, voiceover and cinematic visuals…"></textarea></label>
+      <div class="formgrid"><label class="wide">AI engine<select id="aiProvider"><option value="cloud">Cloud AI · Fastest when configured</option><option value="ollama">Ollama · Server</option><option value="adapter">MJ AI adapter · Text only</option><option value="browser">Browser AI · Slow on phones</option><option value="offline">Offline template · No model</option></select></label><label class="wide">Output type<select id="aiMode"><option value="script">Video script</option><option value="storyboard">Scene-by-scene storyboard</option><option value="caption">Captions & hashtags</option></select></label></div>
+      <button id="generate" class="primary full-button">✦ Generate creative plan</button><div id="aiProgress" class="progress" hidden></div>
+      <div id="aiResult" class="airesult" hidden><textarea id="aiText" rows="16" readonly aria-label="AI result"></textarea><div class="button-row"><button id="copy" class="secondary">Copy result</button><button id="useScript" class="secondary">Use as edit notes</button><button id="sendResultToChat" class="secondary">Continue in chat ↗</button></div></div>
+    </section>
+    <section class="panel"><div class="panelhead"><span class="num">02</span><div><h2>How to get faster, better answers</h2><p>Choose the engine that matches your setup.</p></div></div><div class="engine-cards"><div><b>Cloud AI</b><p>Recommended for quality and speed. Configure AI_BASE_URL, AI_API_KEY and AI_MODEL in Render. Use a model that supports vision if you want photo chat.</p></div><div><b>Ollama</b><p>Works only if an Ollama server is reachable from your backend. Use a vision model for photo questions.</p></div><div><b>Browser AI</b><p>Downloads a small model to your phone. It can take minutes and may fail on low-RAM devices; use only as a fallback.</p></div></div></section>
+  </section>
+
+  <section class="view" data-view="edit">
+    <div class="view-heading"><span class="eyebrow">TIMELINE & EXPORT</span><h1>Edit your video</h1><p>Upload your clips, select audio and subtitles, then render an MP4.</p></div>
+    <div class="edit-grid">
+      <section class="panel"><div class="panelhead"><span class="num">01</span><div><h2>Media library</h2><p>Upload video clips, soundtrack audio or SRT subtitles.</p></div></div><label class="drop" for="files"><span class="dropicon">＋</span><b>Choose media files</b><span>MP4, MOV, MKV, WEBM, MP3, WAV, M4A, SRT</span><input id="files" type="file" multiple accept="video/*,audio/*,.srt"></label><div class="media-toolbar"><span id="mediaCount">0 files</span><button id="clearMedia" class="text-button">Clear list</button></div><div id="mediaList" class="media-list"><p class="muted">Your uploaded files will appear here.</p></div></section>
+      <section class="panel"><div class="panelhead"><span class="num">02</span><div><h2>Edit & export</h2><p>Choose clips, soundtrack, subtitles and output format.</p></div></div><div class="formgrid">
+        <label class="wide">Video clips to combine<select id="clipSelect" multiple size="4" aria-label="Video clips to combine"><option disabled>Upload video files first</option></select><small class="hint">Select one or more videos. Multiple clips are joined in selection order.</small></label>
+        <label class="wide">Background soundtrack<select id="audioSelect"><option value="">Keep original video audio</option></select></label><label class="wide">Subtitle file<select id="subtitleSelect"><option value="">No subtitles</option></select></label><label class="check wide"><input id="burnSubtitles" type="checkbox"> Burn subtitles into the video</label>
+        <label>Aspect ratio<select id="aspect"><option value="9:16">9:16 · Reels / Shorts</option><option value="16:9">16:9 · YouTube</option><option value="1:1">1:1 · Square</option></select></label><label>Resolution<select id="resolution"><option value="1080">1080p · High</option><option value="720">720p · Faster</option></select></label><label>Trim start (seconds)<input id="start" type="number" min="0" value="0" step="0.1"></label><label>Trim end (seconds)<input id="end" type="number" min="0" placeholder="Full length" step="0.1"></label><label class="wide">Music volume <span id="volumeLabel">25%</span><input id="musicVolume" type="range" min="0" max="100" value="25"></label><label class="wide">Output filename<input id="outputName" value="my-video" maxlength="70"></label>
+      </div><button id="render" class="primary full-button">▶ Render MP4</button><div id="renderStatus" class="result" role="status"></div><p class="hint">Keep this page open while rendering. Large videos need more CPU, RAM and disk space on the backend host.</p></section>
+    </div>
+  </section>
+
+  <section class="view" data-view="projects">
+    <div class="view-heading"><span class="eyebrow">YOUR WORKSPACE</span><h1>Projects & learning</h1><p>Save your edit settings and manage your approved training examples.</p></div>
+    <section class="panel projectbar"><div class="panelhead"><span class="num">01</span><div><h2>Saved projects</h2><p>Project settings are stored by the backend server.</p></div></div><div class="project-controls"><input id="projectName" aria-label="Project name" value="My video project" maxlength="100"><button id="saveProject" class="secondary">Save project</button><select id="projectSelect" aria-label="Saved projects"><option value="">Load saved project…</option></select><button id="loadProject" class="secondary">Load</button><button id="deleteProject" class="danger">Delete</button></div></section>
+    <section class="panel"><div class="panelhead"><span class="num">02</span><div><h2>Learning memory</h2><p>Save useful answers explicitly, then export examples for review.</p></div></div><div class="engine-cards"><div><b>Conversation memory</b><p>Recent chat context stays in this browser and helps follow-up replies. It is not model training.</p></div><div><b>Approved examples</b><p>Use “Helpful · save example” on an answer in Chat. Export JSONL and review it before any fine-tuning.</p></div><div><b>Safe model updates</b><p>Fine-tune deliberately, test against held-out prompts, then deploy a validated adapter. Never train blindly on every raw chat.</p></div></div></section>
+  </section>
+  <footer><span>✦ MJ AI Studio</span><span>Make something original.</span></footer>
 </main>
 <script src="static/app.js"></script>
 </body></html>
