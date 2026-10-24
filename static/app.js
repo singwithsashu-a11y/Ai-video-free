@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 const uploaded = [];
 let currentProjectId = null;
+let API_BASE = (new URLSearchParams(location.search).get('api') || localStorage.getItem('mj-ai-api-base') || '').trim().replace(/\\/$/,'');
 let browserWorker = null;
 let pendingBrowserRequest = null;
 
@@ -8,8 +9,12 @@ function setStatus(message, bad=false) {
   $('status').textContent = message;
   $('status').style.color = bad ? '#ff9a9a' : '#a1a8b8';
 }
+function apiUrl(url) {
+  if (!API_BASE) return url;
+  return API_BASE + (url.startsWith('/') ? url : '/'+url);
+}
 async function api(url, options={}) {
-  const response = await fetch(url, options);
+  const response = await fetch(apiUrl(url), options);
   const data = await response.json().catch(()=>({detail:'Unexpected server response'}));
   if (!response.ok) throw new Error(data.detail || 'Request failed');
   return data;
@@ -95,6 +100,19 @@ async function removeMedia(id) {
   } catch(err) { setStatus('Could not remove file: '+err.message,true); }
 }
 $('refreshStatus').addEventListener('click',refreshServices);
+if ($('apiBaseUrl')) $('apiBaseUrl').value=API_BASE;
+$('saveApiBase')?.addEventListener('click',async()=>{
+  const value=$('apiBaseUrl').value.trim().replace(/\\/$/,'');
+  if(value && !/^https?:\\/\\//i.test(value)){setStatus('Backend URL must begin with http:// or https://.',true);return;}
+  API_BASE=value;
+  if(value)localStorage.setItem('mj-ai-api-base',value);else localStorage.removeItem('mj-ai-api-base');
+  await refreshServices();await loadMedia();
+  try{await refreshProjects();}catch(err){setStatus('Backend connected, but projects could not be loaded: '+err.message,true);}
+});
+$('clearApiBase')?.addEventListener('click',async()=>{
+  API_BASE='';localStorage.removeItem('mj-ai-api-base');if($('apiBaseUrl'))$('apiBaseUrl').value='';
+  await refreshServices();await loadMedia();try{await refreshProjects();}catch(err){setStatus('Could not load projects: '+err.message,true);}
+});
 $('files').addEventListener('change',async event=>{
   const files=Array.from(event.target.files||[]);
   event.target.value='';
@@ -132,7 +150,7 @@ $('render').addEventListener('click',async()=>{
     const data=await api('/api/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     $('renderStatus').replaceChildren();
     const msg=document.createElement('span');msg.textContent='Render complete · '+formatBytes(data.size||0)+' · ';
-    const link=document.createElement('a');link.href=data.url;link.download=data.filename;link.textContent='Download '+data.filename;
+    const link=document.createElement('a');link.href=apiUrl(data.url);link.download=data.filename;link.textContent='Download '+data.filename;
     $('renderStatus').append(msg,link);
   } catch(err) { $('renderStatus').textContent=err.message;$('renderStatus').style.color='#ff9a9a'; }
   finally {btn.disabled=false;btn.textContent='▶ Render MP4';}
