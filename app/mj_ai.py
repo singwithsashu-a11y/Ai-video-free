@@ -19,6 +19,7 @@ Role = Literal["system", "user", "assistant"]
 class Message(BaseModel):
     role: Role
     content: str = Field(min_length=1, max_length=24000)
+    image_data_url: str | None = Field(default=None, max_length=12_000_000)
 
 class ChatRequest(BaseModel):
     messages: list[Message] = Field(min_length=1, max_length=40)
@@ -125,13 +126,21 @@ async def status():
 
 @router.post("/chat")
 async def chat(req: ChatRequest):
-    messages = [{"role": m.role, "content": m.content.strip()} for m in req.messages]
+    messages = [{"role": m.role, "content": m.content.strip(),
+                 **({"image_data_url": m.image_data_url} if m.image_data_url else {})}
+                for m in req.messages]
+    for message in messages:
+        image_url = message.get("image_data_url")
+        if image_url and not image_url.startswith("data:image/"):
+            raise HTTPException(422, "Image attachments must be valid image data URLs.")
     if not any(m["role"] == "user" for m in messages):
         raise HTTPException(422, "At least one user message is required.")
     if not any(m["role"] == "system" for m in messages):
         messages.insert(0, {"role": "system", "content": MJ_SYSTEM})
 
     if req.provider == "adapter":
+        if any(m.get("image_data_url") for m in messages):
+            raise HTTPException(422, "The MJ AI LoRA adapter is text-only. Choose a vision-capable Cloud AI or Ollama model to discuss photos.")
         try:
             answer = await run_in_threadpool(
                 _generate_adapter, messages, req.temperature, req.max_tokens
@@ -151,7 +160,14 @@ async def chat(req: ChatRequest):
         if not model:
             raise HTTPException(400, "Choose an installed Ollama model.")
         url = f"{base}/api/chat"
-        payload = {"model": model, "messages": messages, "stream": False,
+        ollama_messages = []
+        for message in messages:
+            item = {"role": message["role"], "content": message["content"]}
+            image_url = message.get("image_data_url")
+            if image_url:
+                item["images"] = [image_url.split(",", 1)[1]]
+            ollama_messages.append(item)
+        payload = {"model": model, "messages": ollama_messages, "stream": False,
                    "options": {"temperature": req.temperature, "num_predict": req.max_tokens}}
         headers = {}
     else:
@@ -161,7 +177,18 @@ async def chat(req: ChatRequest):
         if not base or not key or not model:
             raise HTTPException(400, "OpenAI-compatible provider is not configured. Set AI_BASE_URL, AI_API_KEY and AI_MODEL on the server; never put API keys in browser code.")
         url = f"{base}/chat/completions"
-        payload = {"model": model, "messages": messages, "temperature": req.temperature, "max_tokens": req.max_tokens}
+        compatible_messages = []
+        for message in messages:
+            item = {"role": message["role"], "content": message["content"]}
+            image_url = message.get("image_data_url")
+            if image_url:
+                item["content"] = [
+                    {"type": "text", "text": message["content"]},
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ]
+            compatible_messages.append(item)
+        payload = {"model": model, "messages": compatible_messages,
+                   "temperature": req.temperature, "max_tokens": req.max_tokens}
         headers = {"Authorization": f"Bearer {key}"}
 
     try:
