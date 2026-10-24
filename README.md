@@ -162,3 +162,11 @@ Video editing here is a practical FFmpeg-based workflow, not a full professional
 The repository includes a Colab notebook at [training/MJ_AI_1M_Large_Scale_Training.ipynb](training/MJ_AI_1M_Large_Scale_Training.ipynb) for a real, user-supplied JSONL dataset with at least 1,000,000 valid chat examples. Store the dataset in Google Drive rather than Git; the notebook validates the row count, cleans/validates examples, runs LoRA fine-tuning, and exports the adapter ZIP to Drive. A GPU is strongly recommended, but Colab GPU access and runtime limits are not guaranteed; one million examples may need a paid/dedicated GPU or multiple planned runs.
 
 **Important:** no million-example training has happened merely by adding this notebook. You must provide a million valid, high-quality examples and execute the notebook successfully. Do not inflate the dataset by repeating examples or generating low-quality synthetic duplicates. The output is a LoRA adapter for Qwen2.5-0.5B-Instruct, not a new foundation model. Evaluate on a held-out test set before using it in production.
+
+## Upgraded video-editing model target
+
+The current manual training workflow defaults to **Qwen/Qwen2.5-1.5B-Instruct**, a roughly 1.5B-parameter base model, and includes the curated `training/video_editing_skill_data.jsonl` dataset. It covers editing plans, FFmpeg, trimming, reframing, subtitles, audio, transitions, stabilization, color correction, keyframes, masks, export settings, troubleshooting and continuity.
+
+**Important:** changing the configured base model does not automatically train it. Run the workflow **MJ AI Video Editing Model Training** and verify that the run succeeds and uploads `mj-ai-video-editing-lora-adapter`. A LoRA adapter trained on the old 0.5B base is incompatible with the new 1.5B base; keep `MJ_AI_BASE_MODEL` matched to the adapter. Standard GitHub-hosted runners are CPU-only and may lack the RAM/time for 1.5B fine-tuning; a GPU-enabled notebook/server is recommended.
+
+This is still a text model: it can plan edits and explain commands. Actual rendering uses connected FFmpeg/editor tools; generating video from text or animating a still image requires a separate generative video model/API. A small starter dataset does not teach literally every editing skill or guarantee professional output.
