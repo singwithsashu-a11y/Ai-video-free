@@ -1,4 +1,4 @@
-# AI Video Studio — Local-first, no API key required
+# MJ AI Studio — Local-first AI workspace
 
 A self-hostable video studio with FFmpeg editing and three writing modes:
 - **Local Ollama** — real local language-model writing; no provider API key or cloud AI bill.
@@ -9,6 +9,27 @@ A self-hostable video studio with FFmpeg editing and three writing modes:
 ## Important: where the AI runs
 
 Ollama runs on the same machine as the Python backend by default at `http://127.0.0.1:11434`. If you open a website hosted on shared hosting, localhost means that hosting server — it does **not** mean your phone or personal computer. Most shared hosting plans cannot run Ollama models or GPU video-generation models. To use genuine local AI, run this backend on your own Windows/Linux/macOS computer (or a separate server that you control). The website can still be hosted separately, but the backend must be configured securely to reach your local service; do not expose Ollama directly to the public internet.
+
+
+## MJ AI chat API
+
+The backend now exposes:
+- `GET /api/mj-ai/status` — reports whether a local Ollama model is reachable and whether an OpenAI-compatible server provider is configured.
+- `POST /api/mj-ai/chat` — multi-turn chat using either `provider: "ollama"` or `provider: "openai-compatible"`. Keep provider secrets in server environment variables; never put keys in frontend JavaScript.
+
+Example request:
+```json
+{
+  "provider": "ollama",
+  "messages": [{"role": "user", "content": "Explain gravity in Hinglish"}]
+}
+```
+
+This API uses an existing model; it does not copy ChatGPT, Claude, or Gemini weights. Model quality depends on the model selected and available hardware.
+
+## Training your own MJ AI adapter
+
+See [training/README.md](training/README.md) for dataset preparation and a starter LoRA fine-tuning script. This is for adapting an existing compatible model, not training a foundation model from scratch. Check model licenses and use only data you have permission to train on. Android-only setups will usually need a compatible hosted compute session for training; free GPU access is not guaranteed.
 
 ## Run locally
 
