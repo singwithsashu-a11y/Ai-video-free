@@ -25,5 +25,21 @@ def test_offline_generation_does_not_require_backend_api():
 
 def test_static_hosting_message_explains_backend_required_for_rendering():
     html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
-    assert "GitHub Pages is frontend-only" in html
-    assert "FFmpeg rendering need a running FastAPI backend" in html
+    assert "GitHub Pages hosts only this interface" in html
+    assert "FFmpeg rendering need your deployed FastAPI backend" in html
+
+
+def test_chat_first_workspace_has_tabs_and_photo_attachment():
+    html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+    js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+    assert 'data-view-target="chat"' in html
+    assert 'data-view-target="create"' in html
+    assert 'id="chatImageInput"' in html
+    assert 'id="chatImagePreview"' in html
+    assert "compressChatImage(file)" in js
+    assert "image_data_url" in js
+
+
+def test_browser_model_uses_smaller_generation_budget():
+    worker = (ROOT / "static" / "browser-ai-worker.js").read_text(encoding="utf-8")
+    assert "max_new_tokens: 192" in worker
