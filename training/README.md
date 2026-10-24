@@ -24,3 +24,19 @@ This folder is an honest starting point for customizing an existing open-weight 
 
 ## Safety, privacy, and reliability
 This is a starter training script, not a one-click production trainer. Verify the base model supports the tokenizer chat template and LoRA target modules; hardware/model compatibility varies. Back up data, test outputs, follow licenses, and don't train on private data without consent. No system can honestly promise zero restrictions or perfect answers.
+
+
+## Smoke-test a completed adapter
+
+After extracting a GitHub Actions adapter artifact so the adapter files are directly inside `models/mj-ai-lora/`, install inference dependencies and run:
+
+~~~bash
+pip install -r training/requirements-inference.txt
+python training/test_adapter.py --adapter models/mj-ai-lora --model Qwen/Qwen2.5-0.5B-Instruct
+~~~
+
+The script runs three fixed prompts covering Hinglish storyboarding, FFmpeg subtitles, and short-video captions. It reports the generated answers and fails if any answer is empty. **This is only a load/generation smoke test**, not a benchmark of factuality, instruction-following, or overall quality. Review outputs manually and compare against the unmodified base model before deployment.
+
+## Latest small training run
+
+The GitHub Actions run [40051547131](https://github.com/singwithsashu-a11y/Ai-video-free/actions/runs/40051547131) completed successfully. Its logs show 64 validated examples and 2 epochs, with an adapter artifact uploaded. This verifies that training and artifact export ran; it does not mean the model was trained on one million examples or that its quality is production-ready. The adapter requires the matching `Qwen/Qwen2.5-0.5B-Instruct` base model.
