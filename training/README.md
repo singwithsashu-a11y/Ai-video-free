@@ -40,3 +40,11 @@ The script runs three fixed prompts covering Hinglish storyboarding, FFmpeg subt
 ## Latest small training run
 
 The GitHub Actions run [40051547131](https://github.com/singwithsashu-a11y/Ai-video-free/actions/runs/40051547131) completed successfully. Its logs show 64 validated examples and 2 epochs, with an adapter artifact uploaded. This verifies that training and artifact export ran; it does not mean the model was trained on one million examples or that its quality is production-ready. The adapter requires the matching `Qwen/Qwen2.5-0.5B-Instruct` base model.
+
+## Upgraded video-editing training target
+
+The manual workflow now defaults to `Qwen/Qwen2.5-1.5B-Instruct` and combines `seed_data.jsonl` with `video_editing_skill_data.jsonl`. The added examples cover trimming, reframing, subtitles, audio mixing, transitions, color, stabilization, keyframes, masking, codecs, export, FFmpeg troubleshooting, storyboards and accessibility.
+
+A 1.5B model requires more resources than the previous 0.5B target. GitHub-hosted runners are CPU-only; training can run out of memory or exceed the time limit. Prefer a GPU-enabled notebook/server. Do not change `MJ_AI_BASE_MODEL` to 1.5B while still loading an adapter trained on 0.5B—the base model and adapter must match exactly.
+
+Fine-tuning teaches the model response patterns, not direct video-editing execution. Real edits still need a connected renderer/editor, and text-to-video needs a separate video-generation model. Review outputs and test on held-out prompts before deployment.
