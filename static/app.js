@@ -78,8 +78,8 @@ async function refreshServices() {
     $('engineBadge').textContent=parts.join(' · ');
     setStatus('Backend online · Upload limit '+health.max_upload_mb+' MB · '+parts.join(' · '),!health.ffmpeg_available);
   } catch(err) {
-    $('engineBadge').textContent='Service check failed';
-    setStatus('Backend status check failed: '+err.message,true);
+    $('engineBadge').textContent='Backend not connected';
+    setStatus('Static website is open, but its FastAPI backend is not connected. Browser AI/offline templates can still work; uploads, saved server projects and MP4 rendering need a backend URL. Open “Connect to your backend” to configure it.',true);
   }
 }
 async function loadMedia() {
@@ -157,6 +157,93 @@ $('render').addEventListener('click',async()=>{
   } catch(err) { $('renderStatus').textContent=err.message;$('renderStatus').style.color='#ff9a9a'; }
   finally {btn.disabled=false;btn.textContent='▶ Render MP4';}
 });
+const CHAT_KEY='mj-ai-chat-memory-v1';
+const LEARNING_KEY='mj-ai-approved-examples-v1';
+const CHAT_SYSTEM='You are MJ AI, a helpful multilingual creative assistant. Reply in the user’s language, remember the recent conversation context, be honest about uncertainty, and help with video creation, writing, coding, and learning. Do not claim that you changed your model weights or learned permanently from a chat.';
+let chatHistory=loadJson(CHAT_KEY,[]);
+let approvedExamples=loadJson(LEARNING_KEY,[]);
+function loadJson(key,fallback){try{const value=JSON.parse(localStorage.getItem(key)||'null');return Array.isArray(value)?value:fallback;}catch{return fallback;}}
+function saveChat(){chatHistory=chatHistory.slice(-30);try{localStorage.setItem(CHAT_KEY,JSON.stringify(chatHistory));}catch{ $('chatStatus').textContent='Browser storage is full. Export useful examples, then clear old history.';}}
+function offlineGenerate(prompt,mode){
+  const idea=prompt.trim();
+  if(mode==='caption')return 'HOOK: '+idea.slice(0,140)+'\n\nCAPTION 1: Ye kahani aapko sochne par majboor karegi — end tak dekho.\nCAPTION 2: Ek chhota sa idea, ek badi baat. Aapki kya rai hai?\nCAPTION 3: Is moment ko miss mat karna.\nCAPTION 4: Sach, emotion aur ek powerful message.\nCAPTION 5: Apne dost ke saath share karo.\n\n#Shorts #Reels #Hindi #Hinglish #Video';
+  if(mode==='storyboard')return 'OFFLINE STORYBOARD TEMPLATE\nIDEA: '+idea+'\n\nSCENE 1 (0–3s) — HOOK: Show the most surprising image.\nSCENE 2 (3–8s) — CONTEXT: Establish place, person, or problem.\nSCENE 3 (8–15s) — DEVELOPMENT: Show two details that explain the idea.\nSCENE 4 (15–23s) — PAYOFF: Reveal the key moment.\nSCENE 5 (23–30s) — END: Resolve the idea and add a call to action.\n\nThis is a reusable offline template, not model-generated content.';
+  return 'OFFLINE SCRIPT TEMPLATE\nIDEA: '+idea+'\n\nHOOK (0–3s): Start with a surprising question related to the idea.\nSCENE 1 (3–8s): Establish the situation with one clear visual.\nNARRATION: Explain why the topic matters.\nSCENE 2 (8–18s): Show the main conflict or emotional moment.\nSCENE 3 (18–27s): Deliver the reveal or emotional payoff.\nENDING (27–30s): Finish with a memorable line and a simple question.\n\nThis is a template, not a language-model answer. Use Browser AI or a connected backend for more customized generation.';
+}
+function renderChat(){
+  const box=$('chatMessages');box.replaceChildren();
+  if(!chatHistory.length){const p=document.createElement('p');p.className='chat-empty';p.textContent='Start a conversation. MJ AI can use recent messages as context on this device.';box.append(p);return;}
+  chatHistory.forEach((message,index)=>{
+    const item=document.createElement('article');item.className='chat-message '+(message.role==='user'?'chat-user':'chat-assistant');
+    const role=document.createElement('strong');role.textContent=message.role==='user'?'You':'MJ AI';
+    const body=document.createElement('p');body.textContent=message.content;
+    item.append(role,body);
+    if(message.role==='assistant'&&message.replyTo){
+      const feedback=document.createElement('button');feedback.className='secondary feedback-button';feedback.textContent=message.approved?'✓ Saved for learning':'👍 Helpful · save example';
+      feedback.disabled=Boolean(message.approved);
+      feedback.addEventListener('click',()=>approveExample(index));
+      item.append(feedback);
+    }
+    box.append(item);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+function approveExample(index){
+  const answer=chatHistory[index];if(!answer||answer.role!=='assistant'||!answer.replyTo)return;
+  const userMessage=chatHistory.findLast?chatHistory.slice(0,index).reverse().find(m=>m.role==='user'): [...chatHistory.slice(0,index)].reverse().find(m=>m.role==='user');
+  if(!userMessage)return;
+  answer.approved=true;
+  approvedExamples.push({messages:[{role:'user',content:userMessage.content},{role:'assistant',content:answer.content}]});
+  approvedExamples=approvedExamples.slice(-1000);
+  try{localStorage.setItem(LEARNING_KEY,JSON.stringify(approvedExamples));}catch{}
+  saveChat();renderChat();$('chatStatus').textContent='Answer approved. '+approvedExamples.length+' learning example(s) saved on this device; export them when ready.';
+}
+async function sendChat(){
+  const input=$('chatInput'),prompt=input.value.trim();if(!prompt)return;
+  const btn=$('sendChat'),provider=$('chatProvider').value;
+  input.value='';chatHistory.push({role:'user',content:prompt});saveChat();renderChat();
+  btn.disabled=true;btn.textContent='Thinking…';$('chatStatus').textContent='MJ AI is preparing a reply…';
+  try{
+    let answer='',model='';
+    const context=chatHistory.slice(-12).map(m=>({role:m.role,content:m.content}));
+    if(provider==='offline'){
+      answer='I can keep context from this browser, but Offline Template is not a real learning language model. You said: “'+prompt+'”\n\n'+offlineGenerate(prompt,'script');
+    }else if(provider==='browser'){
+      const result=await askBrowserAI([{role:'system',content:CHAT_SYSTEM},...context]);
+      answer=result;
+    }else if(provider==='adapter'||provider==='local'){
+      const data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:provider==='local'?'ollama':'adapter',messages:[{role:'system',content:CHAT_SYSTEM},...context],max_tokens:1024})});
+      answer=data.text;model=data.model||'';
+    }else if(provider==='cloud'){
+      const data=await api('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:context.map(m=>(m.role==='user'?'User':'MJ AI')+': '+m.content).join('\n\n')+'\n\nReply to the latest user message and use prior context.',mode:'script'})});
+      answer=data.text;
+    }
+    if(!answer.trim())throw new Error('AI returned an empty response.');
+    chatHistory.push({role:'assistant',content:answer,replyTo:prompt,model,approved:false});saveChat();renderChat();
+    $('chatStatus').textContent='Reply ready. Recent context is saved in this browser; use “Helpful · save example” to approve training data.';
+  }catch(err){
+    $('chatHistoryError');
+    chatHistory.push({role:'assistant',content:'Could not get an AI reply: '+err.message+'\n\nIf this is GitHub Pages, try Offline Template or Browser AI, or connect a working backend.',replyTo:prompt,approved:false});saveChat();renderChat();
+    $('chatStatus').textContent='Request failed. Your message is kept locally; choose another engine or check the backend URL.';
+  }finally{btn.disabled=false;btn.textContent='Send message';}
+}
+$('sendChat')?.addEventListener('click',sendChat);
+$('chatInput')?.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}});
+$('chatProvider')?.addEventListener('change',()=>{if($('aiProvider'))$('aiProvider').value=$('chatProvider').value;});
+$('aiProvider')?.addEventListener('change',()=>{if($('chatProvider'))$('chatProvider').value=$('aiProvider').value;});
+$('clearChatMemory')?.addEventListener('click',()=>{
+  if(!confirm('Clear conversation memory and saved chat history from this browser? Approved training examples will remain unless exported/removed separately.'))return;
+  chatHistory=[];localStorage.removeItem(CHAT_KEY);renderChat();$('chatStatus').textContent='Conversation memory cleared from this browser.';
+});
+$('exportLearning')?.addEventListener('click',()=>{
+  if(!approvedExamples.length){$('chatStatus').textContent='No approved examples yet. Tap “Helpful · save example” under a good MJ AI answer first.';return;}
+  const jsonl=approvedExamples.map(row=>JSON.stringify(row)).join('\n')+'\n';
+  const blob=new Blob([jsonl],{type:'application/jsonl;charset=utf-8'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='mj-ai-approved-learning.jsonl';document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);
+  $('chatStatus').textContent='Exported '+approvedExamples.length+' approved example(s). Review/remove private data before using it for fine-tuning.';
+});
+renderChat();
+
 function modeInstruction(mode) {
   return ({
     script:'Write a practical video script with a strong hook, numbered scenes, durations, narration, visuals, on-screen text, and a closing CTA. Be specific and match the user language.',
@@ -189,7 +276,9 @@ $('generate').addEventListener('click',async()=>{
   const provider=$('aiProvider').value,mode=$('aiMode').value;
   try {
     let data;
-    if(provider==='browser') {
+    if(provider==='offline') {
+      data={text:offlineGenerate(prompt,mode),provider:'offline-template'};
+    } else if(provider==='browser') {
       $('aiProgress').hidden=false;$('aiProgress').textContent='Preparing on-device model. First download may be large; keep this tab open.';
       const text=await askBrowserAI([{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}]);
       data={text,provider:'browser-local'};
