@@ -55,6 +55,10 @@ def init_db():
             id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT NOT NULL,
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL
         )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS media (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL,
+            size INTEGER NOT NULL, metadata TEXT NOT NULL, created_at TEXT NOT NULL
+        )""")
 
 
 init_db()
@@ -155,8 +159,24 @@ async def upload(file: UploadFile = File(...)):
         except HTTPException:
             target.unlink(missing_ok=True)
             raise
+    with db() as conn:
+        conn.execute("INSERT INTO media(id,name,kind,size,metadata,created_at) VALUES(?,?,?,?,?,?)",
+                     (file_id, original_name, kind, len(data), json.dumps(metadata), utc_now()))
     return {"id": file_id, "name": original_name, "kind": kind,
             "url": f"/api/media/{target.name}", "size": len(data), "metadata": metadata}
+
+
+@app.get("/api/media")
+def list_media():
+    with db() as conn:
+        rows = conn.execute("SELECT id,name,kind,size,metadata,created_at FROM media ORDER BY created_at DESC LIMIT 300").fetchall()
+    files = []
+    for row in rows:
+        suffix = Path(row["name"]).suffix.lower()
+        files.append({"id": row["id"], "name": row["name"], "kind": row["kind"],
+                      "size": row["size"], "metadata": json.loads(row["metadata"]),
+                      "created_at": row["created_at"], "url": f"/api/media/{row['id']}{suffix}"})
+    return {"files": files}
 
 
 @app.get("/api/media/{filename}")
@@ -172,6 +192,8 @@ def media(filename: str):
 def delete_media(file_id: str):
     path = uploaded_path(file_id)
     path.unlink(missing_ok=True)
+    with db() as conn:
+        conn.execute("DELETE FROM media WHERE id=?", (file_id,))
     return {"ok": True, "deleted_id": file_id}
 
 
