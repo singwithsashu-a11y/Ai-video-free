@@ -61,6 +61,10 @@ Open `http://127.0.0.1:8000`.
 
 See [DEPLOY_NAMECHEAP.md](DEPLOY_NAMECHEAP.md). Shared hosting can serve the frontend and may run the Python API through cPanel Setup Python App/Passenger, depending on the plan. **FFmpeg, long-running renders, large uploads, SQLite persistence, and ML inference may be restricted by the host.** Browser-local AI is the most realistic no-key option on a static/shared host, while rendering still needs the backend and FFmpeg. If the host does not provide FFmpeg, render jobs will not work there.
 
+### GitHub Pages frontend + separate backend
+
+The GitHub Pages preview is a static frontend; it cannot run FastAPI, SQLite or FFmpeg by itself. Open its **Connect to your backend** section and enter the HTTPS URL of the running FastAPI backend. On the backend, set `STUDIO_CORS_ORIGINS` to the exact Pages origin (for this repository, usually `https://singwithsashu-a11y.github.io`) and restart the Python app. If frontend and backend share the same origin, leave the API URL blank.
+
 ## API overview
 
 - `GET /api/health` — backend, FFmpeg/FFprobe and upload limit.
