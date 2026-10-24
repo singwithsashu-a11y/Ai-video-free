@@ -102,8 +102,8 @@ async function removeMedia(id) {
 $('refreshStatus').addEventListener('click',refreshServices);
 if ($('apiBaseUrl')) $('apiBaseUrl').value=API_BASE;
 $('saveApiBase')?.addEventListener('click',async()=>{
-  const value=$('apiBaseUrl').value.trim().replace(/\\/$/,'');
-  if(value && !/^https?:\\/\\//i.test(value)){setStatus('Backend URL must begin with http:// or https://.',true);return;}
+  const value=$('apiBaseUrl').value.trim().replace(/\/$/,'');
+  if(value && !/^https?:\/\//i.test(value)){setStatus('Backend URL must begin with http:// or https://.',true);return;}
   API_BASE=value;
   if(value)localStorage.setItem('mj-ai-api-base',value);else localStorage.removeItem('mj-ai-api-base');
   await refreshServices();await loadMedia();
