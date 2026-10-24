@@ -287,10 +287,10 @@ $('generate').addEventListener('click',async()=>{
       $('aiProgress').hidden=false;$('aiProgress').textContent='Preparing on-device model. First download may be large; keep this tab open.';
       const text=await askBrowserAI([{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}]);
       data={text,provider:'browser-local'};
-    } else if(provider==='adapter'||provider==='ollama') {
-      data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:provider==='adapter'?'adapter':'ollama',messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:768,temperature:0.55})});
-    } else if(provider==='cloud') {
-      data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'openai-compatible',messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:1200,temperature:0.55})});
+    } else if(provider==='adapter') {
+      data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'adapter',messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:768,temperature:0.55})});
+    } else if(provider==='ollama'||provider==='cloud') {
+      data=await api('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:provider==='ollama'?'ollama':'cloud',mode,messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:provider==='ollama'?768:1200,temperature:0.55})});
     } else {
       data=await api('/api/local-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode,provider})});
     }
