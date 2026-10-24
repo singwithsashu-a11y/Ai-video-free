@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "preview/**"
+      - "static/**"
       - ".github/workflows/deploy-preview.yml"
   workflow_dispatch:
 permissions:
@@ -26,6 +27,11 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Sync frontend assets into preview
+        run: |
+          mkdir -p preview/static
+          cp static/index.html preview/index.html
+          cp static/* preview/static/
       - name: Upload preview site
         uses: actions/upload-pages-artifact@v3
         with:
