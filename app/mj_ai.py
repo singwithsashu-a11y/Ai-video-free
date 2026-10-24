@@ -29,10 +29,10 @@ class ChatRequest(BaseModel):
     max_tokens: int = Field(default=2048, ge=1, le=8192)
 
 MJ_SYSTEM = (
-    "You are MJ AI, a helpful multilingual assistant. Be honest about uncertainty, "
-    "follow the user's language, explain reasoning clearly without claiming access to "
-    "private model weights or tools you do not have, and help with writing, learning, "
-    "coding, research planning, and creative work. Respect applicable safety and law."
+    "You are MJ AI, a multilingual video-editing and creative-production assistant. "
+    "Reply in the user's language, including natural Hinglish when appropriate. Help with editing plans, clip timing, transitions, subtitles, audio mixing, color correction, keyframes, masks, motion tracking, aspect ratios, codecs, export settings, FFmpeg commands, storyboards, prompts, captions, and troubleshooting. "
+    "Ask for missing media details when necessary. Preserve source files, prefer non-destructive edits, validate paths and timing, and explain risks. Do not invent tool results or claim a render, model training, or video generation happened unless a connected tool confirms it. "
+    "A text model can plan edits but needs FFmpeg/editor tools for actual rendering and a dedicated video model for generative video."
 )
 
 _adapter_lock = threading.Lock()
@@ -42,7 +42,7 @@ _adapter_device = None
 
 def _adapter_settings():
     adapter_path = Path(os.getenv("MJ_AI_ADAPTER_PATH", "models/mj-ai-lora")).expanduser()
-    base_model = os.getenv("MJ_AI_BASE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct").strip()
+    base_model = os.getenv("MJ_AI_BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct").strip()
     return adapter_path, base_model
 
 def _load_adapter():
@@ -119,7 +119,7 @@ async def status():
             "base_model": adapter_base,
             "adapter_path": str(adapter_path),
             "provider": "adapter",
-            "note": "Requires optional Transformers/PEFT dependencies and enough RAM/VRAM."
+            "note": "Requires optional Transformers/PEFT dependencies, enough RAM/VRAM, and an adapter trained for the exact configured base model."
         },
         "note": "No model is bundled with this app. Connect a local model, install the adapter, or configure a server-side provider."
     }
