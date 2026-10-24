@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.local_ai import router as local_ai_router
+from app.chat_api import router as chat_api_router
 from app.mj_ai import router as mj_ai_router
 
 BASE = Path(__file__).resolve().parent.parent
@@ -40,6 +41,7 @@ if cors_origins:
     )
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 app.include_router(local_ai_router)
+app.include_router(chat_api_router)
 app.include_router(mj_ai_router)
 
 MAX_MB = max(1, int(os.getenv("MAX_UPLOAD_MB", os.getenv("MAX_FILE_SIZE_MB", "500"))))
