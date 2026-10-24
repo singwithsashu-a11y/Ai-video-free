@@ -48,6 +48,24 @@ MJ_AI_BASE_MODEL=Qwen/Qwen2.5-0.5B-Instruct
 
 For an optional OpenAI-compatible server, configure AI_BASE_URL, AI_API_KEY, and AI_MODEL on the backend only. Never commit secrets to Git.
 
+## Render deployment and fast AI responses
+
+For Render Web Service, use this start command:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Build command: `pip install -r requirements.txt`. Root directory: repository root. FFmpeg/FFprobe must be installed on the host; a standard Python build environment may not include them automatically. Verify `GET /api/health` after deployment. Persistent uploads and SQLite need a persistent disk or external storage/database; ephemeral files can disappear on redeploy/restart.
+
+### Recommended AI provider
+
+The default recommended route is a server-side OpenAI-compatible chat/vision API. In Render → your Web Service → Environment, configure `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL`. Use a fast instruct model for text and a vision-capable model for photo questions. Keep the key only in Render environment variables, never in browser code. The app sends a photo only when the user attaches it and presses Send; the provider must support OpenAI-style image_url message content. Alternatively, choose Ollama only if an Ollama server is reachable from the backend and the installed model supports vision.
+
+The Browser AI fallback downloads Qwen2.5-0.5B to the visitor's device and is much slower on some phones; it has a reduced generation budget to avoid very long waits. For the best response quality and latency, use a hosted model. The included LoRA adapter was trained on a small dataset and should not be treated as a stronger general-purpose model; evaluating and replacing the base/model requires a deliberate training workflow.
+
+The Chat UI supports text and photo discussion when a compatible vision model is configured. It does not generate a new video directly from a text prompt or animate a still photo; the Edit Video view renders uploaded video clips through FFmpeg.
+
 ## Conversation memory and feedback-based learning
 
 The **Talk to MJ AI · Learning Memory** panel keeps recent conversation history in the current browser's local storage and includes recent turns as context for follow-up replies. The user can clear that memory at any time. When an answer is useful, tap **Helpful · save example** to explicitly approve that user/assistant pair; use **Export approved learning data** to download a JSONL file. Review it for private information and incorrect answers before adding it to a training dataset.
