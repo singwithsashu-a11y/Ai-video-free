@@ -1,39 +1,51 @@
-# MJ AI Studio — Local-first AI workspace
+# MJ AI Studio — self-hostable AI video workspace
 
-A self-hostable video studio with FFmpeg editing and three writing modes:
-- **Local Ollama** — real local language-model writing; no provider API key or cloud AI bill.
-- **Offline Template** — works without Ollama, internet AI, or API keys; clearly labelled deterministic templates, not an LLM.
-- **Optional Cloud API** — retains support for an OpenAI-compatible provider if you choose it.
-- Upload video/audio/SRT, trim and export vertical 9:16, square 1:1, or landscape 16:9 MP4; merge clips.
+A responsive video editing starter with an actual FastAPI/FFmpeg backend, project saving, media library, optional server-side AI providers, and experimental browser-local Qwen generation.
 
-## Important: where the AI runs
+## Current features
 
-Ollama runs on the same machine as the Python backend by default at `http://127.0.0.1:11434`. If you open a website hosted on shared hosting, localhost means that hosting server — it does **not** mean your phone or personal computer. Most shared hosting plans cannot run Ollama models or GPU video-generation models. To use genuine local AI, run this backend on your own Windows/Linux/macOS computer (or a separate server that you control). The website can still be hosted separately, but the backend must be configured securely to reach your local service; do not expose Ollama directly to the public internet.
+- Upload MP4, MOV, MKV, WEBM, AVI, M4V, MP3, WAV, M4A, AAC, OGG, FLAC and SRT files.
+- Persistent media library stored on the server; list and remove uploaded files.
+- Combine multiple video clips, trim a single clip, and export portrait 9:16, landscape 16:9 or square 1:1 MP4 in 720p or 1080p.
+- Optional background soundtrack mixed with original clip audio, with adjustable music volume.
+- Optional SRT subtitle burn-in.
+- Save, load, update and delete project settings using SQLite.
+- AI writing modes: script, storyboard, captions/hashtags.
+- AI engines: browser-local Qwen model (no API key; experimental), local Ollama, the trained MJ AI LoRA adapter, offline template mode, or an optional OpenAI-compatible server provider.
+- Mobile-responsive interface.
 
+## Important model notes
 
-## MJ AI chat API
+**The LoRA adapter is not a complete model.** It must be loaded with the matching base model, currently `Qwen/Qwen2.5-0.5B-Instruct`. Download the adapter artifact from the successful GitHub Actions run, extract it so `adapter_config.json` is directly inside the adapter directory, and keep the weights on the backend host (not in Git).
 
-The backend now exposes:
-- `GET /api/mj-ai/status` — reports whether a local Ollama model is reachable and whether an OpenAI-compatible server provider is configured.
-- `POST /api/mj-ai/chat` — multi-turn chat using either `provider: "ollama"` or `provider: "openai-compatible"`. Keep provider secrets in server environment variables; never put keys in frontend JavaScript.
+The starter training dataset contains only a handful of examples. A successful training job verifies that the pipeline ran; it does not prove the adapter is high quality. Evaluate with held-out prompts and expand the dataset before relying on it.
 
-Example request:
-```json
-{
-  "provider": "ollama",
-  "messages": [{"role": "user", "content": "Explain gravity in Hinglish"}]
-}
+### Browser-local AI on Android
+
+The **Browser AI** option loads `onnx-community/Qwen2.5-0.5B-Instruct` via Transformers.js from a CDN. The first run downloads model files and can use hundreds of MB of data/storage and substantial RAM. Generation runs in the browser after loading, without a provider API key. WebGPU and WASM support vary by Android device/browser; low-memory devices may fail. This browser mode uses the base model, not the trained server-side LoRA adapter.
+
+### Ollama and adapter inference
+
+Ollama and the adapter run on the machine hosting the Python backend. They do not automatically run on the visitor's phone. Configure server environment variables:
+
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:3b
+MJ_AI_ADAPTER_PATH=models/mj-ai-lora
+MJ_AI_BASE_MODEL=Qwen/Qwen2.5-0.5B-Instruct
 ```
 
-This API uses an existing model; it does not copy ChatGPT, Claude, or Gemini weights. Model quality depends on the model selected and available hardware.
+For adapter inference, install optional dependencies in the backend environment:
 
-## Training your own MJ AI adapter
+```bash
+pip install -r training/requirements-inference.txt
+```
 
-See [training/README.md](training/README.md) for dataset preparation and a starter LoRA fine-tuning script. This is for adapting an existing compatible model, not training a foundation model from scratch. Check model licenses and use only data you have permission to train on. Android-only setups will usually need a compatible hosted compute session for training; free GPU access is not guaranteed.
+For optional OpenAI-compatible inference, configure `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL` on the server. Never put provider keys in frontend JavaScript or commit them to Git.
 
 ## Run locally
 
-Requirements: Python 3.11+, FFmpeg and FFprobe on PATH. Ollama is optional if you only want editing and offline templates.
+Requirements: Python 3.11+, FFmpeg and FFprobe available on PATH.
 
 ```bash
 python -m venv .venv
@@ -45,32 +57,26 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 Open `http://127.0.0.1:8000`.
 
-## Enable real local AI (no API key)
+## Namecheap / cPanel deployment
 
-1. Install Ollama from [ollama.com](https://ollama.com).
-2. Download a model once (model files use disk space and the first download needs internet):
-   ```bash
-   ollama pull qwen2.5:3b
-   ```
-3. Keep Ollama running and start the video studio. The default endpoint is `http://127.0.0.1:11434` and default model is `qwen2.5:3b`.
-4. In **AI creative assistant**, choose **Local Ollama · No API key**.
+See [DEPLOY_NAMECHEAP.md](DEPLOY_NAMECHEAP.md). Shared hosting can serve the frontend and may run the Python API through cPanel Setup Python App/Passenger, depending on the plan. **FFmpeg, long-running renders, large uploads, SQLite persistence, and ML inference may be restricted by the host.** Browser-local AI is the most realistic no-key option on a static/shared host, while rendering still needs the backend and FFmpeg. If the host does not provide FFmpeg, render jobs will not work there.
 
-Optional environment variables:
-- `OLLAMA_BASE_URL=http://127.0.0.1:11434`
-- `OLLAMA_MODEL=qwen2.5:3b`
+## API overview
 
-You can choose another model already installed in Ollama. Model speed/quality depends on your RAM, CPU/GPU, and model size. Local AI does not mean zero hardware requirements.
+- `GET /api/health` — backend, FFmpeg/FFprobe and upload limit.
+- `POST /api/upload` — upload a media file.
+- `GET /api/media` — list uploaded media.
+- `GET /api/media/{filename}` — serve uploaded media.
+- `DELETE /api/media/{file_id}` — remove uploaded media.
+- `POST /api/render` — render clips with optional soundtrack and burned-in SRT.
+- `GET /api/download/{filename}` — download rendered MP4.
+- `GET /api/projects`, `POST /api/projects`, `GET/PUT/DELETE /api/projects/{id}` — project settings CRUD.
+- `GET /api/local-ai/status`, `POST /api/local-ai` — Ollama and offline template modes.
+- `GET /api/mj-ai/status`, `POST /api/mj-ai/chat` — Ollama, OpenAI-compatible and optional LoRA adapter inference.
+- `POST /api/ai` — optional OpenAI-compatible script-writing endpoint.
 
-## Offline mode
+## Security and production limitations
 
-Choose **Offline template · No install**. This mode needs no AI server and no API key, but it creates structured starter templates rather than intelligent, model-generated writing.
+This starter does not yet include user accounts, tenant isolation, a public-facing authentication layer, a background render queue, per-user quotas, malware scanning, or cloud object storage. **Do not expose an untrusted public deployment with private media until authentication and access controls are added.** Uploaded files and project records are stored on the backend host. Add HTTPS, request limits, authentication, backups, cleanup policies and monitoring before production use.
 
-## Optional cloud AI
-
-Set `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL` in the backend environment and choose **Cloud API · Optional**. Never put secret API keys in browser JavaScript or commit them to GitHub.
-
-## Current scope and limitations
-
-This is an MVP, not a professional multi-track editor. AI text generation is local/cloud/offline as described above; full text-to-video diffusion, avatar generation, automatic speech transcription, user accounts, project collaboration, and cloud project management are not implemented by this starter. FFmpeg rendering requires FFmpeg/FFprobe installed on the backend host. Some shared hosts disable or limit FFmpeg and long-running processes.
-
-Before public deployment, add authentication, per-user storage isolation, quotas, upload scanning, a background job queue, HTTPS, persistent storage, secret management, and cleanup policies. Do not expose this server publicly without appropriate protections.
+This is an editing and writing starter, not a full professional non-linear editor or a text-to-video diffusion service.
