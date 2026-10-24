@@ -36,9 +36,11 @@ $('generate').addEventListener('click',async()=>{
  const prompt=$('prompt').value.trim();if(!prompt){$('aiText').value='Describe your video idea first.';$('aiResult').hidden=false;return}
  const btn=$('generate');btn.disabled=true;btn.textContent='Generating…';$('aiResult').hidden=false;$('aiText').value='Working…';
  const provider=$('aiProvider').value;
- const endpoint=provider==='cloud'?'/api/ai':'/api/local-ai';
- const body=provider==='cloud'?{prompt,mode:$('aiMode').value}:{prompt,mode:$('aiMode').value,provider};
- try{const data=await api(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('aiText').value=data.text+(data.model?'\n\n[Local model: '+data.model+']':'')}
+ const mode=$('aiMode').value;
+ const endpoint=provider==='cloud'?'/api/ai':provider==='adapter'?'/api/mj-ai/chat':'/api/local-ai';
+ const instructions={script:'Write a practical video script with narration, scene-by-scene visuals, and on-screen text. Match the user language.',storyboard:'Create a scene-by-scene storyboard with shot, action, visual, on-screen text, and sound notes. Match the user language.',caption:'Write 5 concise social-video captions and relevant hashtags. Match the user language.'};
+ const body=provider==='cloud'?{prompt,mode}:provider==='adapter'?{provider:'adapter',messages:[{role:'system',content:instructions[mode]||instructions.script},{role:'user',content:prompt}]}:{prompt,mode,provider};
+ try{const data=await api(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('aiText').value=data.text+(data.model?'\n\n[Model: '+data.model+']':'')}
  catch(err){$('aiText').value=err.message}
  finally{btn.disabled=false;btn.textContent='✦ Generate'}
 });
