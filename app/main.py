@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from app.local_ai import router as local_ai_router
+from app.mj_ai import router as mj_ai_router
 
 BASE = Path(__file__).resolve().parent.parent
 STORAGE = BASE / "storage"
@@ -18,6 +19,7 @@ for p in (UPLOADS, OUTPUTS):
 app = FastAPI(title="Claude AI Free Video Studio")
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 app.include_router(local_ai_router)
+app.include_router(mj_ai_router)
 MAX_MB = int(os.getenv("MAX_UPLOAD_MB", "500"))
 ALLOWED = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".mp3", ".wav", ".m4a", ".aac", ".srt"}
 
