@@ -1,12 +1,12 @@
-name: MJ AI LoRA Training
+name: MJ AI Video Editing Model Training
 
 on:
   workflow_dispatch:
     inputs:
       model:
-        description: "Hugging Face base model"
+        description: "Hugging Face base model (GPU recommended for 1.5B)"
         required: true
-        default: "Qwen/Qwen2.5-0.5B-Instruct"
+        default: "Qwen/Qwen2.5-1.5B-Instruct"
         type: string
       epochs:
         description: "Training epochs (start with 1)"
@@ -16,7 +16,7 @@ on:
       max_length:
         description: "Maximum token length"
         required: true
-        default: "256"
+        default: "512"
         type: string
 
 permissions:
@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   train:
-    name: Fine-tune MJ AI adapter (CPU runner)
+    name: Fine-tune MJ AI video-editing adapter
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -44,21 +44,22 @@ jobs:
       - name: Install training dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install torch transformers datasets peft accelerate
+          python -m pip install torch transformers datasets peft accelerate safetensors
 
-      - name: Validate starter dataset
+      - name: Combine and validate reviewed training examples
         run: |
-          python training/prepare_dataset.py training/seed_data.jsonl /tmp/mj-ai-processed.jsonl
+          cat training/seed_data.jsonl training/video_editing_skill_data.jsonl > /tmp/mj-ai-combined.jsonl
+          python training/prepare_dataset.py /tmp/mj-ai-combined.jsonl /tmp/mj-ai-processed.jsonl
           python - <<'PY'
           import json
           p = "/tmp/mj-ai-processed.jsonl"
           rows = [json.loads(line) for line in open(p, encoding="utf-8") if line.strip()]
-          if not rows:
-              raise SystemExit("Dataset has zero valid examples")
-          print(f"Validated {len(rows)} examples")
+          if len(rows) < 25:
+              raise SystemExit(f"Need at least 25 valid examples, found {len(rows)}")
+          print(f"Validated {len(rows)} reviewed examples")
           PY
 
-      - name: Train LoRA adapter
+      - name: Fine-tune LoRA adapter
         env:
           MODEL_ID: ${{ inputs.model }}
           EPOCHS: ${{ inputs.epochs }}
@@ -69,12 +70,13 @@ jobs:
             --data /tmp/mj-ai-processed.jsonl \
             --output output/mj-ai-lora \
             --epochs "$EPOCHS" \
-            --max-length "$MAX_LENGTH"
+            --max-length "$MAX_LENGTH" \
+            --rank 8 \
+            --gradient-checkpointing
 
       - name: Verify adapter output
         run: |
           test -s output/mj-ai-lora/adapter_config.json
-          find output/mj-ai-lora -maxdepth 1 -type f -printf '%f %s bytes\n'
           python - <<'PY'
           from pathlib import Path
           p = Path("output/mj-ai-lora")
@@ -88,7 +90,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: mj-ai-lora-adapter
+          name: mj-ai-video-editing-lora-adapter
           path: output/mj-ai-lora/
           if-no-files-found: error
           retention-days: 14
