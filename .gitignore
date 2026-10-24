@@ -4,3 +4,7 @@ __pycache__/
 storage/*
 !storage/.gitkeep
 *.pyc
+
+# Downloaded model weights/adapters must stay out of Git
+models/
+training/output/
