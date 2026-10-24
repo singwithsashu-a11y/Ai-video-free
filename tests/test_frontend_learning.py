@@ -56,3 +56,18 @@ def test_render_blueprint_has_health_check_and_server_start_command():
     assert "uvicorn app.main:app --host 0.0.0.0 --port $PORT" in config
     assert "healthCheckPath: /api/health" in config
     assert "AI_API_KEY" in config
+
+
+
+def test_provider_switching_chat_api_is_registered():
+    main = (ROOT / "app" / "main.py").read_text(encoding="utf-8")
+    chat_api = (ROOT / "app" / "chat_api.py").read_text(encoding="utf-8")
+    assert "app.include_router(chat_api_router)" in main
+    assert '@router.post("/chat")' in chat_api
+    assert '@router.get("/providers")' in chat_api
+    assert '"ollama"' in chat_api
+    assert '"offline"' in chat_api
+    assert "AI_BASE_URL" in chat_api
+    assert "AI_API_KEY" in chat_api
+    assert "AI_MODEL" in chat_api
+    assert "Never echo provider response bodies" in chat_api
