@@ -4,13 +4,14 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0d12">
 <title>MJ AI Video Studio</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 <header><a class="brand" href="/" aria-label="MJ AI Studio home"><span class="logo">✦</span><span><b>MJ AI Studio</b><small>AI • Edit • Export</small></span></a><div class="header-actions"><span id="engineBadge" class="badge">Checking services…</span><button id="refreshStatus" class="icon-button" title="Refresh service status" aria-label="Refresh service status">↻</button></div></header>
 <main>
 <section class="hero"><p class="eyebrow">YOUR CREATIVE WORKSPACE</p><h1>Make videos.<br><span>Make them yours.</span></h1><p class="sub">Edit clips, create scripts with AI, add music and subtitles, and export MP4 for Shorts, Reels or YouTube.</p></section>
 <div id="status" class="status" role="status">Checking backend…</div>
+<details class="api-settings"><summary>Connect to your backend (static hosting / GitHub Pages)</summary><div class="backend-connect"><label>Backend base URL<input id="apiBaseUrl" type="url" placeholder="https://your-api-domain.example"></label><button id="saveApiBase" class="secondary">Connect</button><button id="clearApiBase" class="danger">Use same-site backend</button></div><p class="hint">Leave blank when the website and API are served from the same host. For GitHub Pages, enter your FastAPI backend URL and configure <code>STUDIO_CORS_ORIGINS</code> on that server.</p></details>
 <section class="panel projectbar"><div><h2>Projects</h2><p>Save your edit settings and reopen them later on this server.</p></div><div class="project-controls"><input id="projectName" aria-label="Project name" value="My video project" maxlength="100"><button id="saveProject" class="secondary">Save project</button><select id="projectSelect" aria-label="Saved projects"><option value="">Load saved project…</option></select><button id="loadProject" class="secondary">Load</button><button id="deleteProject" class="danger">Delete</button></div></section>
 <div class="grid">
 <section class="panel"><div class="panelhead"><span class="num">01</span><div><h2>Media library</h2><p>Upload video clips, soundtrack audio or SRT subtitles</p></div></div>
@@ -52,5 +53,5 @@
 </div>
 <footer><span>MJ AI Studio</span><span>Make something original.</span></footer>
 </main>
-<script src="/static/app.js"></script>
+<script src="static/app.js"></script>
 </body></html>
