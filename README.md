@@ -15,6 +15,8 @@
 - AI options: browser-local Qwen (experimental), Ollama, optional OpenAI-compatible endpoint, offline templates, and optional MJ AI LoRA adapter inference.
 - Training scripts and a manually triggered GitHub Actions LoRA training workflow.
 - Responsive interface for desktop and mobile.
+- Browser-local multi-turn chat memory, user-approved positive examples, and JSONL export for a reviewed future fine-tuning dataset.
+- Offline script/storyboard/caption templates that do not require a backend.
 
 ## Quick start (local)
 
@@ -45,6 +47,12 @@ MJ_AI_BASE_MODEL=Qwen/Qwen2.5-0.5B-Instruct
 ~~~
 
 For an optional OpenAI-compatible server, configure AI_BASE_URL, AI_API_KEY, and AI_MODEL on the backend only. Never commit secrets to Git.
+
+## Conversation memory and feedback-based learning
+
+The **Talk to MJ AI · Learning Memory** panel keeps recent conversation history in the current browser's local storage and includes recent turns as context for follow-up replies. The user can clear that memory at any time. When an answer is useful, tap **Helpful · save example** to explicitly approve that user/assistant pair; use **Export approved learning data** to download a JSONL file. Review it for private information and incorrect answers before adding it to a training dataset.
+
+This is a practical learning loop, not human-like self-training: conversation memory changes the context of replies but does not change model weights. Approved examples are not automatically sent to a server or automatically trained. Fine-tuning must be run deliberately, evaluated, and deployed as a new adapter. This prevents private chats or malicious feedback from silently poisoning the model.
 
 ## Run AI without a provider API key
 
@@ -111,7 +119,7 @@ Use only data you own or have permission to use. Keep private data, credentials,
 ## Deployment
 
 - [Namecheap / cPanel deployment guide](DEPLOY_NAMECHEAP.md)
-- GitHub Pages is static hosting only; it cannot run FastAPI, SQLite, FFmpeg, or backend model inference. Configure the UI's **Connect to your backend** setting with the HTTPS URL of a separately hosted API.
+- GitHub Pages is static hosting only; it cannot run FastAPI, SQLite, FFmpeg, or backend model inference. Browser AI and offline templates can work in the static frontend, but uploads, server-side media/project storage, and MP4 rendering require a separately hosted FastAPI backend. Configure the UI's **Connect to your backend** setting with the HTTPS URL of that API.
 - For a Pages frontend, set STUDIO_CORS_ORIGINS on the backend to the exact frontend origin (typically https://singwithsashu-a11y.github.io).
 - Shared hosting may restrict FFmpeg, long renders, file sizes, persistent storage, and machine-learning dependencies. Verify the host supports the required runtime before deployment.
 
