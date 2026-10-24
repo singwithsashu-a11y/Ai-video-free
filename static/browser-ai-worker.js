@@ -35,13 +35,13 @@ self.onmessage = async event => {
   const request = event.data || {};
   if (request.type !== 'generate') return;
   try {
-    self.postMessage({type:'progress',message:'Loading Qwen 0.5B into this browser. First run may download hundreds of MB.'});
+    self.postMessage({type:'progress',message:'Loading the small on-device model. First use can take several minutes; Cloud AI is faster when configured.'});
     const generator = await getGenerator();
     self.postMessage({type:'progress',message:'Generating on your device…'});
     const output = await generator(request.messages || [], {
-      max_new_tokens: 512,
+      max_new_tokens: 192,
       do_sample: true,
-      temperature: 0.7,
+      temperature: 0.55,
       repetition_penalty: 1.08
     });
     let generated = output?.[0]?.generated_text;
