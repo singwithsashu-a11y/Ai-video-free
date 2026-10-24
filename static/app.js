@@ -77,7 +77,7 @@ async function refreshServices() {
   $('engineBadge').textContent='Checking services…';
   try {
     const [health,mj]=await Promise.all([api('/api/health'),api('/api/mj-ai/status')]);
-    const parts=[health.ffmpeg_available?'FFmpeg ready':'FFmpeg missing',mj.local.available?'Ollama connected':'Ollama offline',mj.adapter?.configured?'adapter installed':'adapter not installed'];
+    const parts=[health.ffmpeg_available?'FFmpeg ready':'FFmpeg missing',mj.openai_compatible_configured?'Cloud AI configured':'Cloud AI not configured',mj.local.available?'Ollama connected':'Ollama offline',mj.adapter?.configured?'adapter installed ('+mj.adapter.base_model+')':'adapter not installed'];
     $('engineBadge').textContent=parts.join(' · ');
     setStatus('Backend online · Upload limit '+health.max_upload_mb+' MB · '+parts.join(' · '),!health.ffmpeg_available);
   } catch(err) {
@@ -209,6 +209,7 @@ async function sendChat(){
   btn.disabled=true;btn.textContent='Thinking…';$('chatStatus').textContent='MJ AI is preparing a reply…';
   try{
     let answer='',model='';
+    if(['cloud','ollama','adapter'].includes(provider)&&!API_BASE) throw new Error('Backend URL is not connected. Open ⚙ Backend connection and enter your deployed FastAPI/Render URL. GitHub Pages alone cannot run the server model.');
     const context=chatHistory.slice(-12).map(m=>({role:m.role,content:m.content,...(m.imageDataUrl?{image_data_url:m.imageDataUrl}:{})}));
     if(provider==='offline'){
       answer='I can keep context from this browser, but Offline Template is not a real learning language model. You said: “'+prompt+'”\n\n'+offlineGenerate(prompt,'script');
@@ -279,6 +280,7 @@ $('generate').addEventListener('click',async()=>{
   const provider=$('aiProvider').value,mode=$('aiMode').value;
   try {
     let data;
+    if(['cloud','ollama','adapter'].includes(provider)&&!API_BASE) throw new Error('Backend URL is not connected. Open ⚙ Backend connection and enter your deployed FastAPI/Render URL. GitHub Pages alone cannot run the server model.');
     if(provider==='offline') {
       data={text:offlineGenerate(prompt,mode),provider:'offline-template'};
     } else if(provider==='browser') {
