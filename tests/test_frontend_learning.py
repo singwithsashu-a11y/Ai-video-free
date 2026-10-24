@@ -43,3 +43,16 @@ def test_chat_first_workspace_has_tabs_and_photo_attachment():
 def test_browser_model_uses_smaller_generation_budget():
     worker = (ROOT / "static" / "browser-ai-worker.js").read_text(encoding="utf-8")
     assert "max_new_tokens: 192" in worker
+
+
+def test_backend_ai_requires_a_configured_backend_url():
+    js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+    assert "Backend URL is not connected" in js
+    assert "Cloud AI configured" in js
+
+
+def test_render_blueprint_has_health_check_and_server_start_command():
+    config = (ROOT / "render.yaml").read_text(encoding="utf-8")
+    assert "uvicorn app.main:app --host 0.0.0.0 --port $PORT" in config
+    assert "healthCheckPath: /api/health" in config
+    assert "AI_API_KEY" in config
