@@ -11,13 +11,16 @@ PROMPTS = [
     "Hinglish mein ek 3-scene sad music video storyboard likho. Har scene mein visual aur camera movement do.",
     "Create a concise FFmpeg command to burn an SRT subtitle file into an MP4 video.",
     "Mujhe ek short video ke liye 3 original caption ideas do.",
+    "Landscape MP4 ko 9:16 Shorts mein reframe karne ka safe FFmpeg plan do.",
+    "SRT subtitles burn karne aur audio fade-in/fade-out ke liye accurate workflow batao.",
+    "FFmpeg render black screen de raha hai; pehle kaun se logs aur checks chahiye?",
 ]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--adapter", type=Path, default=Path("models/mj-ai-lora"))
-    parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
+    parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
     parser.add_argument("--max-new-tokens", type=int, default=160)
     args = parser.parse_args()
 
@@ -52,7 +55,7 @@ def main():
         messages = [
             {
                 "role": "system",
-                "content": "You are MJ AI, a helpful assistant for video creation and editing. Be concise and accurate.",
+                "content": "You are MJ AI, a careful video-editing assistant. Give actionable and technically accurate steps, preserve source files, and state tool limitations.",
             },
             {"role": "user", "content": prompt},
         ]
