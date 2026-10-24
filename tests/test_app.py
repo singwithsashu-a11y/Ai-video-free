@@ -43,3 +43,27 @@ def test_local_ai_status_is_nonfatal_when_ollama_is_missing():
     response = client.get("/api/local-ai/status")
     assert response.status_code == 200
     assert "available" in response.json()
+
+
+def test_mj_ai_status_endpoint_reports_available_providers(monkeypatch):
+    monkeypatch.delenv("AI_BASE_URL", raising=False)
+    monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.delenv("AI_MODEL", raising=False)
+    response = client.get("/api/mj-ai/status")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "MJ AI"
+    assert "local" in payload
+    assert payload["openai_compatible_configured"] is False
+
+
+def test_mj_ai_chat_requires_provider_configuration(monkeypatch):
+    monkeypatch.delenv("AI_BASE_URL", raising=False)
+    monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.delenv("AI_MODEL", raising=False)
+    response = client.post("/api/mj-ai/chat", json={
+        "provider": "openai-compatible",
+        "messages": [{"role": "user", "content": "Hello MJ AI"}]
+    })
+    assert response.status_code == 400
+    assert "AI_BASE_URL" in response.json()["detail"]
