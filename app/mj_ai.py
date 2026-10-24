@@ -42,7 +42,7 @@ _adapter_device = None
 
 def _adapter_settings():
     adapter_path = Path(os.getenv("MJ_AI_ADAPTER_PATH", "models/mj-ai-lora")).expanduser()
-    base_model = os.getenv("MJ_AI_BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct").strip()
+    base_model = os.getenv("MJ_AI_BASE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct").strip()
     return adapter_path, base_model
 
 def _load_adapter():
