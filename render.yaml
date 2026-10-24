@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mj-ai-video-free
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: STUDIO_CORS_ORIGINS
+        value: https://singwithsashu-a11y.github.io,https://mjai.in,https://www.mjai.in
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        sync: false
+      - key: MAX_UPLOAD_MB
+        value: "100"
