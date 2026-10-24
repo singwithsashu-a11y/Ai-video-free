@@ -46,11 +46,21 @@ AI_API_KEY=
 AI_MODEL=
 ```
 
-## 5. Browser AI
+## 5. Separate frontend / GitHub Pages
+
+If you use the static GitHub Pages preview with a backend hosted elsewhere, enter the backend's HTTPS base URL in the website's **Connect to your backend** settings. Set the backend environment variable to the exact allowed frontend origin, for example:
+
+```env
+STUDIO_CORS_ORIGINS=https://singwithsashu-a11y.github.io
+```
+
+Use only origins you control. Restart the Python app after changing this variable. If frontend and backend are on the same origin, leave this variable blank.
+
+## 6. Browser AI
 
 The frontend's Browser AI mode downloads the small ONNX Qwen model directly to each visitor's browser via a CDN. It does not require an API key or server-side model runtime, but the initial download can be large and mobile RAM/browser support varies. It does not use the trained LoRA adapter.
 
-## 6. Verify deployment
+## 7. Verify deployment
 
 After restarting the app:
 - Open the configured website URL.
@@ -59,6 +69,6 @@ After restarting the app:
 - Upload a short test video and render 720p first.
 - Try Browser AI separately; the first model download requires internet.
 
-## 7. Public deployment warning
+## 8. Public deployment warning
 
 This starter currently has no login or per-user authorization. Anyone who can reach an exposed API may be able to upload media, render jobs, or alter/delete projects and media. Do not put private media on a public instance until authentication, quotas and access controls are implemented. Keep uploads/outputs out of public document directories when your hosting layout allows it.
