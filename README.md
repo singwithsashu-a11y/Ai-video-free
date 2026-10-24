@@ -119,3 +119,9 @@ Use only data you own or have permission to use. Keep private data, credentials,
 This is an evolving starter, not yet a hardened public multi-user production service. The project does not currently provide a complete authentication/tenant-isolation system, public API abuse controls, a background render queue, per-user quotas, malware scanning, or cloud object storage. Do not expose private user media on an untrusted public deployment until access controls are implemented and tested. Add HTTPS, authentication, upload/request limits, backups, cleanup, monitoring, and rate limits before production use.
 
 Video editing here is a practical FFmpeg-based workflow, not a full professional non-linear editor or a text-to-video diffusion model. Contributions and bug reports are welcome.
+
+## Large-scale MJ AI training (1M examples)
+
+The repository includes a Colab notebook at [training/MJ_AI_1M_Large_Scale_Training.ipynb](training/MJ_AI_1M_Large_Scale_Training.ipynb) for a real, user-supplied JSONL dataset with at least 1,000,000 valid chat examples. Store the dataset in Google Drive rather than Git; the notebook validates the row count, cleans/validates examples, runs LoRA fine-tuning, and exports the adapter ZIP to Drive. A GPU is strongly recommended, but Colab GPU access and runtime limits are not guaranteed; one million examples may need a paid/dedicated GPU or multiple planned runs.
+
+**Important:** no million-example training has happened merely by adding this notebook. You must provide a million valid, high-quality examples and execute the notebook successfully. Do not inflate the dataset by repeating examples or generating low-quality synthetic duplicates. The output is a LoRA adapter for Qwen2.5-0.5B-Instruct, not a new foundation model. Evaluate on a held-out test set before using it in production.
