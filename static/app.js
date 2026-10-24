@@ -167,7 +167,7 @@ function modeInstruction(mode) {
 function askBrowserAI(messages) {
   return new Promise((resolve,reject)=>{
     if(!browserWorker) {
-      browserWorker=new Worker('/static/browser-ai-worker.js',{type:'module'});
+      browserWorker=new Worker('static/browser-ai-worker.js',{type:'module'});
       browserWorker.onmessage=event=>{
         const data=event.data||{};
         if(data.type==='progress') {$('aiProgress').hidden=false;$('aiProgress').textContent=data.message||'Loading model…';return;}
