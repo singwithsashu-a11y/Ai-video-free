@@ -1,7 +1,8 @@
 const $ = id => document.getElementById(id);
 const uploaded = [];
 let currentProjectId = null;
-let API_BASE = (new URLSearchParams(location.search).get('api') || localStorage.getItem('mj-ai-api-base') || '').trim().replace(/\\/$/,'');
+let API_BASE = (new URLSearchParams(location.search).get('api') || localStorage.getItem('mj-ai-api-base') || '').trim();
+API_BASE = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 let browserWorker = null;
 let pendingBrowserRequest = null;
 
@@ -102,8 +103,9 @@ async function removeMedia(id) {
 $('refreshStatus').addEventListener('click',refreshServices);
 if ($('apiBaseUrl')) $('apiBaseUrl').value=API_BASE;
 $('saveApiBase')?.addEventListener('click',async()=>{
-  const value=$('apiBaseUrl').value.trim().replace(/\/$/,'');
-  if(value && !/^https?:\/\//i.test(value)){setStatus('Backend URL must begin with http:// or https://.',true);return;}
+  const rawValue=$('apiBaseUrl').value.trim();
+  const value=rawValue.endsWith('/') ? rawValue.slice(0, -1) : rawValue;
+  if(value && !(value.startsWith('https://') || value.startsWith('http://'))){setStatus('Backend URL must begin with http:// or https://.',true);return;}
   API_BASE=value;
   if(value)localStorage.setItem('mj-ai-api-base',value);else localStorage.removeItem('mj-ai-api-base');
   await refreshServices();await loadMedia();
