@@ -29,7 +29,7 @@ for folder in (UPLOADS, OUTPUTS):
     folder.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="MJ AI Video Studio", version="1.0.0")
-cors_origins = [origin.strip().rstrip("/") for origin in os.getenv("STUDIO_CORS_ORIGINS", "").split(",") if origin.strip()]
+cors_origins = [origin.strip().rstrip("/") for origin in os.getenv("STUDIO_CORS_ORIGINS", "https://singwithsashu-a11y.github.io,https://mjai.in,https://www.mjai.in").split(",") if origin.strip()]
 if cors_origins:
     app.add_middleware(
         CORSMiddleware,
