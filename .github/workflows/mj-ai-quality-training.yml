@@ -1,13 +1,7 @@
-name: MJ AI Improved LoRA Training
+name: MJ AI Small-Dataset LoRA Smoke Test
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
-    paths:
-      - "training/seed_data.jsonl"
-      - "training/train_lora.py"
-      - ".github/workflows/mj-ai-quality-training.yml"
 
 permissions:
   contents: read
