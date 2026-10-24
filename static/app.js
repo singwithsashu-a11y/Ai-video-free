@@ -5,7 +5,10 @@ let API_BASE = (new URLSearchParams(location.search).get('api') || localStorage.
 API_BASE = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 let browserWorker = null;
 let pendingBrowserRequest = null;
+let pendingChatImage = null;
 
+document.querySelectorAll('[data-view-target]').forEach(button=>button.addEventListener('click',()=>switchView(button.dataset.viewTarget)));
+function switchView(view){document.querySelectorAll('[data-view]').forEach(s=>s.classList.toggle('active',s.dataset.view===view));document.querySelectorAll('[data-view-target]').forEach(b=>b.classList.toggle('active',b.dataset.viewTarget===view));if(view==='edit')loadMedia();window.scrollTo({top:0,behavior:'smooth'});}
 function setStatus(message, bad=false) {
   $('status').textContent = message;
   $('status').style.color = bad ? '#ff9a9a' : '#a1a8b8';
@@ -159,11 +162,11 @@ $('render').addEventListener('click',async()=>{
 });
 const CHAT_KEY='mj-ai-chat-memory-v1';
 const LEARNING_KEY='mj-ai-approved-examples-v1';
-const CHAT_SYSTEM='You are MJ AI, a helpful multilingual creative assistant. Reply in the user’s language, remember the recent conversation context, be honest about uncertainty, and help with video creation, writing, coding, and learning. Do not claim that you changed your model weights or learned permanently from a chat.';
+const CHAT_SYSTEM='You are MJ AI Studio, a capable multilingual creative copilot. Reply in the same language and script as the user, including natural Hinglish when appropriate. Read the recent conversation and answer the latest request directly. Be concrete, structured, original and concise unless asked for detail. For video requests include a strong hook, duration, scene-by-scene visuals, camera/action, narration/dialogue, on-screen text, sound and transitions. For image questions describe visible details and do not invent facts. Ask at most one focused clarification only when essential. Never claim you rendered or generated media, used a tool, or permanently learned unless it actually happened. If a feature is unavailable, say so and offer the nearest working workflow.';
 let chatHistory=loadJson(CHAT_KEY,[]);
 let approvedExamples=loadJson(LEARNING_KEY,[]);
 function loadJson(key,fallback){try{const value=JSON.parse(localStorage.getItem(key)||'null');return Array.isArray(value)?value:fallback;}catch{return fallback;}}
-function saveChat(){chatHistory=chatHistory.slice(-30);try{localStorage.setItem(CHAT_KEY,JSON.stringify(chatHistory));}catch{ $('chatStatus').textContent='Browser storage is full. Export useful examples, then clear old history.';}}
+function saveChat(){chatHistory=chatHistory.slice(-30);try{localStorage.setItem(CHAT_KEY,JSON.stringify(chatHistory.map(({imageDataUrl,...m})=>m)));}catch{ $('chatStatus').textContent='Browser storage is full. Export useful examples, then clear old history.';}}
 function offlineGenerate(prompt,mode){
   const idea=prompt.trim();
   if(mode==='caption')return 'HOOK: '+idea.slice(0,140)+'\n\nCAPTION 1: Ye kahani aapko sochne par majboor karegi — end tak dekho.\nCAPTION 2: Ek chhota sa idea, ek badi baat. Aapki kya rai hai?\nCAPTION 3: Is moment ko miss mat karna.\nCAPTION 4: Sach, emotion aur ek powerful message.\nCAPTION 5: Apne dost ke saath share karo.\n\n#Shorts #Reels #Hindi #Hinglish #Video';
@@ -172,17 +175,17 @@ function offlineGenerate(prompt,mode){
 }
 function renderChat(){
   const box=$('chatMessages');box.replaceChildren();
-  if(!chatHistory.length){const p=document.createElement('p');p.className='chat-empty';p.textContent='Start a conversation. MJ AI can use recent messages as context on this device.';box.append(p);return;}
+  if(!chatHistory.length){const welcome=document.createElement('div');welcome.className='welcome-card';welcome.innerHTML='<span class="welcome-icon">✦</span><h3>Hey! Let\'s make something great.</h3><p>Ask me anything, brainstorm a video, or attach a photo to discuss it.</p><div class="suggestions"><button class="suggestion" data-prompt="Create a viral 30-second Hinglish documentary Short with a strong hook.">🎬 Viral Short idea</button><button class="suggestion" data-prompt="Help me make a cinematic sad love music video, scene by scene.">🎵 Music video</button><button class="suggestion" data-prompt="Give me 5 original YouTube video ideas with strong hooks.">💡 Video ideas</button></div>';box.append(welcome);welcome.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{$('chatInput').value=b.dataset.prompt;$('chatInput').focus();}));return;}
   chatHistory.forEach((message,index)=>{
     const item=document.createElement('article');item.className='chat-message '+(message.role==='user'?'chat-user':'chat-assistant');
     const role=document.createElement('strong');role.textContent=message.role==='user'?'You':'MJ AI';
     const body=document.createElement('p');body.textContent=message.content;
     item.append(role,body);
+    if(message.imageDataUrl){const img=document.createElement('img');img.src=message.imageDataUrl;img.alt='Image attached to this message';item.append(img);}
     if(message.role==='assistant'&&message.replyTo){
-      const feedback=document.createElement('button');feedback.className='secondary feedback-button';feedback.textContent=message.approved?'✓ Saved for learning':'👍 Helpful · save example';
-      feedback.disabled=Boolean(message.approved);
-      feedback.addEventListener('click',()=>approveExample(index));
-      item.append(feedback);
+      const actions=document.createElement('div');actions.className='button-row';
+      const feedback=document.createElement('button');feedback.className='secondary feedback-button';feedback.textContent=message.approved?'✓ Saved for learning':'👍 Helpful · save example';feedback.disabled=Boolean(message.approved);feedback.addEventListener('click',()=>approveExample(index));actions.append(feedback);
+      const use=document.createElement('button');use.className='secondary feedback-button';use.textContent='↗ Use for video plan';use.addEventListener('click',()=>{$('prompt').value=message.content+'\\n\\nCreate a practical video plan from this answer.';$('aiMode').value='storyboard';switchView('create');});actions.append(use);item.append(actions);
     }
     box.append(item);
   });
@@ -199,33 +202,35 @@ function approveExample(index){
   saveChat();renderChat();$('chatStatus').textContent='Answer approved. '+approvedExamples.length+' learning example(s) saved on this device; export them when ready.';
 }
 async function sendChat(){
-  const input=$('chatInput'),prompt=input.value.trim();if(!prompt)return;
+  const input=$('chatInput'),prompt=input.value.trim();if(!prompt&&!pendingChatImage)return;
   const btn=$('sendChat'),provider=$('chatProvider').value;
-  input.value='';chatHistory.push({role:'user',content:prompt});saveChat();renderChat();
+  if(pendingChatImage&&(provider==='browser'||provider==='adapter'||provider==='offline')){$('chatStatus').textContent=provider==='offline'?'Offline templates cannot understand photos. Choose Cloud AI or an Ollama vision model.':'This engine cannot understand images. Choose Cloud AI with a vision-capable model or Ollama with a vision model.';return;}
+  const imageDataUrl=pendingChatImage;input.value='';pendingChatImage=null;$('chatImagePreview').hidden=true;chatHistory.push({role:'user',content:prompt||'Please analyze this attached image.',imageDataUrl});saveChat();renderChat();
   btn.disabled=true;btn.textContent='Thinking…';$('chatStatus').textContent='MJ AI is preparing a reply…';
   try{
     let answer='',model='';
-    const context=chatHistory.slice(-12).map(m=>({role:m.role,content:m.content}));
+    const context=chatHistory.slice(-12).map(m=>({role:m.role,content:m.content,...(m.imageDataUrl?{image_data_url:m.imageDataUrl}:{})}));
     if(provider==='offline'){
       answer='I can keep context from this browser, but Offline Template is not a real learning language model. You said: “'+prompt+'”\n\n'+offlineGenerate(prompt,'script');
     }else if(provider==='browser'){
       const result=await askBrowserAI([{role:'system',content:CHAT_SYSTEM},...context]);
       answer=result;
-    }else if(provider==='adapter'||provider==='local'){
-      const data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:provider==='local'?'ollama':'adapter',messages:[{role:'system',content:CHAT_SYSTEM},...context],max_tokens:1024})});
+    }else if(provider==='adapter'||provider==='ollama'||provider==='cloud'){
+      const providerName=provider==='adapter'?'adapter':provider==='ollama'?'ollama':'openai-compatible';
+      const data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:providerName,messages:[{role:'system',content:CHAT_SYSTEM},...context],max_tokens:768,temperature:0.55})});
       answer=data.text;model=data.model||'';
-    }else if(provider==='cloud'){
-      const data=await api('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:context.map(m=>(m.role==='user'?'User':'MJ AI')+': '+m.content).join('\n\n')+'\n\nReply to the latest user message and use prior context.',mode:'script'})});
-      answer=data.text;
     }
     if(!answer.trim())throw new Error('AI returned an empty response.');
     chatHistory.push({role:'assistant',content:answer,replyTo:prompt,model,approved:false});saveChat();renderChat();
     $('chatStatus').textContent='Reply ready. Recent context is saved in this browser; use “Helpful · save example” to approve training data.';
   }catch(err){
-    $('chatStatus').textContent='Request failed: '+err.message+'. Your message is kept locally; choose Offline Template or Browser AI, or check the backend URL.';
+    $('chatStatus').textContent='Request failed: '+err.message+'. For photos, choose a vision-capable Cloud AI or Ollama vision model; check backend and provider settings.';
   }finally{btn.disabled=false;btn.textContent='Send message';}
 }
 $('sendChat')?.addEventListener('click',sendChat);
+$('chatImageInput')?.addEventListener('change',async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;if(!file.type.startsWith('image/')){$('chatStatus').textContent='Please choose an image file.';return;}if(file.size>15*1024*1024){$('chatStatus').textContent='Image is too large. Choose an image under 15 MB.';return;}try{pendingChatImage=await compressChatImage(file);$('chatPreviewImg').src=pendingChatImage;$('chatImageName').textContent=file.name;$('chatImagePreview').hidden=false;$('chatStatus').textContent='Photo attached. Ask a question about it, then send.';$('chatInput').focus();}catch(err){$('chatStatus').textContent='Could not read image: '+err.message;}});
+$('removeChatImage')?.addEventListener('click',()=>{pendingChatImage=null;$('chatImagePreview').hidden=true;$('chatImageInput').value='';});
+function compressChatImage(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('File read failed'));reader.onload=()=>{const img=new Image();img.onerror=()=>reject(new Error('Image could not be opened'));img.onload=()=>{const scale=Math.min(1,1024/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',0.78));};img.src=reader.result;};reader.readAsDataURL(file);});}
 $('chatInput')?.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}});
 $('chatProvider')?.addEventListener('change',()=>{if($('aiProvider'))$('aiProvider').value=$('chatProvider').value;});
 $('aiProvider')?.addEventListener('change',()=>{if($('chatProvider'))$('chatProvider').value=$('aiProvider').value;});
@@ -280,10 +285,10 @@ $('generate').addEventListener('click',async()=>{
       $('aiProgress').hidden=false;$('aiProgress').textContent='Preparing on-device model. First download may be large; keep this tab open.';
       const text=await askBrowserAI([{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}]);
       data={text,provider:'browser-local'};
-    } else if(provider==='adapter') {
-      data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'adapter',messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:2048})});
+    } else if(provider==='adapter'||provider==='ollama') {
+      data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:provider==='adapter'?'adapter':'ollama',messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:768,temperature:0.55})});
     } else if(provider==='cloud') {
-      data=await api('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode})});
+      data=await api('/api/mj-ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'openai-compatible',messages:[{role:'system',content:modeInstruction(mode)},{role:'user',content:prompt}],max_tokens:1200,temperature:0.55})});
     } else {
       data=await api('/api/local-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode,provider})});
     }
@@ -299,6 +304,7 @@ $('copy').addEventListener('click',async()=>{
   catch(err){$('aiText').select();document.execCommand('copy');}
 });
 $('useScript').addEventListener('click',()=>{$('prompt').value=$('aiText').value;$('prompt').focus();});
+$('sendResultToChat')?.addEventListener('click',()=>{switchView('chat');$('chatInput').value='Improve this video plan, make it more original and production-ready:\\n\\n'+$('aiText').value;$('chatInput').focus();});
 function projectPayload() {
   return {files:selectedClipIds(),audio_id:$('audioSelect').value||null,subtitles_id:$('subtitleSelect').value||null,
     burn_subtitles:$('burnSubtitles').checked,aspect:$('aspect').value,resolution:$('resolution').value,
