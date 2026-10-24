@@ -35,7 +35,10 @@ $('render').addEventListener('click',async()=>{
 $('generate').addEventListener('click',async()=>{
  const prompt=$('prompt').value.trim();if(!prompt){$('aiText').value='Describe your video idea first.';$('aiResult').hidden=false;return}
  const btn=$('generate');btn.disabled=true;btn.textContent='Generating…';$('aiResult').hidden=false;$('aiText').value='Working…';
- try{const data=await api('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode:$('aiMode').value})});$('aiText').value=data.text}
+ const provider=$('aiProvider').value;
+ const endpoint=provider==='cloud'?'/api/ai':'/api/local-ai';
+ const body=provider==='cloud'?{prompt,mode:$('aiMode').value}:{prompt,mode:$('aiMode').value,provider};
+ try{const data=await api(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('aiText').value=data.text+(data.model?'\n\n[Local model: '+data.model+']':'')}
  catch(err){$('aiText').value=err.message}
  finally{btn.disabled=false;btn.textContent='✦ Generate'}
 });
